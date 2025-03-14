@@ -20,7 +20,13 @@ public class LocalizationTest extends LinearOpMode {
 
         SparkFunOTOSDrive drive = new SparkFunOTOSDrive(hardwareMap, new Pose2d(0, 0, 0));
 
+        telemetry.addLine("Pausing to allow OTOS to initialise");
+        telemetry.update();
+        sleep(1000);
+        telemetry.addLine("OTOS should be initialised");
+        telemetry.update();
         waitForStart();
+        telemetry.clear();
 
         while (opModeIsActive()) {
             drive.setDrivePowers(new PoseVelocity2d(
