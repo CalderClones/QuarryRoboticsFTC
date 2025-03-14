@@ -13,6 +13,9 @@ import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 import com.acmerobotics.roadrunner.ftc.SparkFunOTOSCorrected;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.RobotLog;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
@@ -131,6 +134,10 @@ public class SparkFunOTOSDrive extends MecanumDrive {
         pose = OTOSPoseToRRPose(otosPose);
         lastOtosPose = pose;
 
+        // check if OTOS is reporting any error statuses
+        // (only actually accesses hardware every 50ms)
+        checkStatus();
+
         // RR standard
         poseHistory.add(pose);
         while (poseHistory.size() > 100) {
@@ -142,6 +149,44 @@ public class SparkFunOTOSDrive extends MecanumDrive {
         // RR localizer note:
         // OTOS velocity units happen to be identical to Roadrunners, so we don't need any conversion!
         return new PoseVelocity2d(new Vector2d(otosVel.x, otosVel.y),otosVel.h);
+    }
+
+    private final ElapsedTime timeSinceStatusChecked = new ElapsedTime();
+    public void checkStatus() { // for future: maybe this should be a global warning source instead (need to talk to oscar about that)
+        // only check status every 50ms
+        // this is a somewhat arbitrary number; goal is to ensure otos is still working and not reporting erros without tanking looptimes
+        if (timeSinceStatusChecked.milliseconds() > 50) {
+            timeSinceStatusChecked.reset();
+
+            // read the OTOS status from the hardware; probably adds 3ms to looptimes when its called?
+            SparkFunOTOS.Status status = otos.getStatus();
+            FlightRecorder.write("OTOS_STATUS",status);
+
+            String warnings = "";
+            if (status.errorLsm) {
+                warnings += "OTOS reported tracking error errorLsm. \n " +
+                        "The Road Runner OTOS integration developer does not know what this means but it sounds bad. \n";
+            }
+            if (status.errorPaa) {
+                warnings += "OTOS reported tracking error errorPaa. \n " +
+                        " The Road Runner OTOS integration developer does not know what this means but it sounds bad. \n";
+            }
+            if (status.warnOpticalTracking) {
+                warnings += " OTOS reported a loss in optical tracking. \n" +
+                        " Is your mount height correct? \n";
+            }
+            if (status.warnTiltAngle) {
+                warnings += "OTOS reported an excessive tilt angle. \n" +
+                        " Is it mounted correctly? \n";
+            }
+
+            // need to avoid duplicates
+            // this doesn't quite avoid duplicates but it's pretty good
+            // it can add multiple when it changes
+            if (!warnings.isEmpty() && !RobotLog.getGlobalWarningMessage().message.contains(warnings)) {
+                RobotLog.addGlobalWarningMessage(warnings);
+            }
+        }
     }
 
 
