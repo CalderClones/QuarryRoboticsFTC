@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static com.qualcomm.robotcore.util.Range.clip;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.canvas.Canvas;
@@ -47,6 +49,8 @@ import org.firstinspires.ftc.teamcode.messages.MecanumCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.MecanumLocalizerInputsMessage;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
 
+import com.arcrobotics.ftclib.util.InterpLUT;
+
 import java.lang.Math;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -61,22 +65,23 @@ public class MecanumDrive {
         public RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
                 RevHubOrientationOnRobot.LogoFacingDirection.UP;
         public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
+                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
 
         // drive model parameters
-        public double inPerTick = 1; // SparkFun OTOS Note: you can probably leave this at 1
-        public double lateralInPerTick = 0.872882; //0.736834497757;// OTOS: 0.872882;
-        public double trackWidthTicks = 12.66; //12.791; // otos 12.66;
+        public double inPerTick = 0.027004498;
+//1; // SparkFun OTOS Note: you can probably leave this at 1
+        public double lateralInPerTick = 0.032390662; //OTOS: 0.7318118062441628; //0.736834497757;// OTOS: 0.872882;
+        public double trackWidthTicks = 980.592516421012; //OTOS: 13.280247738192255; //12.791; // otos 12.66;
 
         // feedforward parameters (in tick units)
-        public double kS = 0.563756515907424; //0.7635681070147831; // OTOS: 0.563756515907424;
-        public double kV = 0.19141851548064043; //0.1946438443334511; // OTOS:0.19141851548064043;
-        public double kA = 0.01;
+        public double kS = 1.2790341964808194;//1.138698904711986; //0.7635681070147831; // OTOS: 0.563756515907424;
+        public double kV = 0.003751213768622512;//0.14138798930538327; //0.1946438443334511; // OTOS:0.19141851548064043;
+        public double kA = 0.0000001;
 
         // path profile parameters (in inches)
         public double maxWheelVel = 45; // determined empircally from tachometer data
         public double minProfileAccel = -30;
-        public double maxProfileAccel = 50;
+        public double maxProfileAccel = 45;
 
         // turn profile parameters (in radians)
         public double maxAngVel = Math.PI; // shared with path
@@ -123,6 +128,10 @@ public class MecanumDrive {
     private final DownsampledWriter driveCommandWriter = new DownsampledWriter("DRIVE_COMMAND", 50_000_000);
     private final DownsampledWriter mecanumCommandWriter = new DownsampledWriter("MECANUM_COMMAND", 50_000_000);
 
+    private InterpLUT BLScale = new InterpLUT();
+    private InterpLUT BRScale = new InterpLUT();
+    private InterpLUT FLScale = new InterpLUT();
+    private InterpLUT FRScale = new InterpLUT();
     public class DriveLocalizer implements Localizer {
         public final Encoder leftFront, leftBack, rightBack, rightFront;
         public final IMU imu;
@@ -209,6 +218,109 @@ public class MecanumDrive {
     }
 
     public MecanumDrive(HardwareMap hardwareMap, Pose2d pose) {
+
+        //set up drive power scaling. This should probably be broken out into its own class, but this bodge will have to do for now.
+        BLScale.add(-1.1, -1.0);
+        BLScale.add(-1.0, -0.944444444444444);
+        BLScale.add(-0.9, -0.85625);
+        BLScale.add(-0.8, -0.756923076923077);
+        BLScale.add(-0.7, -0.66875);
+        BLScale.add(-0.6, -0.580851063829787);
+        BLScale.add(-0.5, -0.493421052631579);
+        BLScale.add(-0.4, -0.4);
+        BLScale.add(-0.3, -0.3);
+        BLScale.add(-0.2, -0.2);
+        BLScale.add(-0.1, -0.1);
+        BLScale.add(0, 0);
+        BLScale.add(0.1, 0.1);
+        BLScale.add(0.2, 0.2);
+        BLScale.add(0.3, 0.3);
+        BLScale.add(0.4, 0.4);
+        BLScale.add(0.5, 0.493421052631579);
+        BLScale.add(0.6, 0.580851063829787);
+        BLScale.add(0.7, 0.66875);
+        BLScale.add(0.8, 0.756923076923077);
+        BLScale.add(0.9, 0.85625);
+        BLScale.add(1.0, 0.944444444444444);
+        BLScale.add(1.1, 1.0);
+        BLScale.createLUT();
+
+        BRScale.add(-1.1, -1.0);
+        BRScale.add(-1.0, -1.0);
+        BRScale.add(-0.9, -0.9);
+        BRScale.add(-0.8, -0.8);
+        BRScale.add(-0.7, -0.7);
+        BRScale.add(-0.6, -0.6);
+        BRScale.add(-0.5, -0.5);
+        BRScale.add(-0.4, -0.4);
+        BRScale.add(-0.3, -0.286363636363636);
+        BRScale.add(-0.2, -0.171428571428571);
+        BRScale.add(-0.1, -0.075);
+        BRScale.add(0, 0);
+        BRScale.add(0.1, 0.075);
+        BRScale.add(0.2, 0.171428571428571);
+        BRScale.add(0.3, 0.286363636363636);
+        BRScale.add(0.4, 0.4);
+        BRScale.add(0.5, 0.5);
+        BRScale.add(0.6, 0.6);
+        BRScale.add(0.7, 0.7);
+        BRScale.add(0.8, 0.8);
+        BRScale.add(0.9, 0.9);
+        BRScale.add(1.0, 1.0);
+        BRScale.add(1.1, 1.0);
+        BRScale.createLUT();
+
+        FLScale.add(-1.1,1.0);
+        FLScale.add(-1.0, -0.95625);
+        FLScale.add(-0.9, -0.85625);
+        FLScale.add(-0.8, -0.756923076923077);
+        FLScale.add(-0.7, -0.66875);
+        FLScale.add(-0.6, -0.574736842105263);
+        FLScale.add(-0.5, -0.480769230769231);
+        FLScale.add(-0.4, -0.38125);
+        FLScale.add(-0.3, -0.273913043478261);
+        FLScale.add(-0.2, -0.171428571428571);
+        FLScale.add(-0.1, -0.0642857142857143);
+        FLScale.add(0, 0);
+        FLScale.add(0.1, 0.0642857142857143);
+        FLScale.add(0.2, 0.171428571428571);
+        FLScale.add(0.3, 0.273913043478261);
+        FLScale.add(0.4, 0.38125);
+        FLScale.add(0.5, 0.480769230769231);
+        FLScale.add(0.6, 0.574736842105263);
+        FLScale.add(0.7, 0.66875);
+        FLScale.add(0.8, 0.756923076923077);
+        FLScale.add(0.9, 0.85625);
+        FLScale.add(1.0, 0.95625);
+        FLScale.add(1.1, 1.0);
+        FLScale.createLUT();
+
+        FRScale.add(-1.1, -1.0);
+        FRScale.add(-1.0, -0.974522292993631);
+        FRScale.add(-0.9, -0.874468085106383);
+        FRScale.add(-0.8, -0.774803149606299);
+        FRScale.add(-0.7, -0.680909090909091);
+        FRScale.add(-0.6, -0.580851063829787);
+        FRScale.add(-0.5, -0.493421052631579);
+        FRScale.add(-0.4, -0.387301587301587);
+        FRScale.add(-0.3, -0.28);
+        FRScale.add(-0.2, -0.171428571428571);
+        FRScale.add(-0.1, -0.06);
+        FRScale.add(0, 0);
+        FRScale.add(0.1, 0.06);
+        FRScale.add(0.2, 0.171428571428571);
+        FRScale.add(0.3, 0.28);
+        FRScale.add(0.4, 0.387301587301587);
+        FRScale.add(0.5, 0.493421052631579);
+        FRScale.add(0.6, 0.580851063829787);
+        FRScale.add(0.7, 0.680909090909091);
+        FRScale.add(0.8, 0.774803149606299);
+        FRScale.add(0.9, 0.874468085106383);
+        FRScale.add(1.0, 0.974522292993631);
+        FRScale.add(1.1, 1.0);
+        FRScale.createLUT();
+
+
         this.pose = pose;
 
         LynxFirmware.throwIfModulesAreOutdated(hardwareMap);
@@ -254,10 +366,10 @@ public class MecanumDrive {
             maxPowerMag = Math.max(maxPowerMag, power.value());
         }
 
-        leftFront.setPower(wheelVels.leftFront.get(0) / maxPowerMag);
-        leftBack.setPower(wheelVels.leftBack.get(0) / maxPowerMag);
-        rightBack.setPower(wheelVels.rightBack.get(0) / maxPowerMag);
-        rightFront.setPower(wheelVels.rightFront.get(0) / maxPowerMag);
+        leftFront.setPower(FLScale.get(clip(wheelVels.leftFront.get(0) / maxPowerMag, -1.0, 1.0)));
+        leftBack.setPower(BLScale.get(clip(wheelVels.leftBack.get(0) / maxPowerMag, -1.0, 1.0)));
+        rightBack.setPower(BRScale.get(clip(wheelVels.rightBack.get(0) / maxPowerMag, -1.0, 1.0)));
+        rightFront.setPower(FRScale.get(clip(wheelVels.rightFront.get(0) / maxPowerMag, -1.0, 1.0)));
     }
 
     public final class FollowTrajectoryAction implements Action {

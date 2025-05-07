@@ -51,6 +51,10 @@ import java.util.List;
 @Config
 @TeleOp(group = "drive")
 public class QuarryRoboticsMotorSpeedProfiling extends LinearOpMode {
+
+    public static int speed = 10;
+
+
     private String alliance = "BOTH";
 
     private Gamepad currentGamepad1 = new Gamepad();
@@ -60,9 +64,12 @@ public class QuarryRoboticsMotorSpeedProfiling extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        FtcDashboard dashboard = FtcDashboard.getInstance();
 
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
+        speed = 0;
+
 
 while(!isStarted() && !isStopRequested())
         {
@@ -70,24 +77,10 @@ while(!isStarted() && !isStopRequested())
             sleep(50);
         }
 
-        int speed = 0;
-
         ElapsedTime timer = new ElapsedTime();
 
-        while (!isStopRequested()) {
-
-            previousGamepad1.copy(currentGamepad1);
-            previousGamepad2.copy(currentGamepad2);
-            currentGamepad1.copy(gamepad1);
-            currentGamepad2.copy(gamepad2);
-
-            if (currentGamepad1.a && !previousGamepad1.a){
-                speed = (speed + 1) % 11;
-            }
-
-            if (currentGamepad1.b && !previousGamepad1.b){
-                speed = (speed - 1) % 11;
-            }
+        while (speed < 11) {
+            timer.reset();
 
             Vector2d input = new Vector2d(
                     speed / 10.0,
@@ -97,21 +90,21 @@ while(!isStarted() && !isStopRequested())
                     input,
                     0));
 
-            drive.updatePoseEstimate();
 
-            telemetry.addData("x", drive.pose.position.x);
-            telemetry.addData("y", drive.pose.position.y);
-            telemetry.addData("speed", speed);
 
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.fieldOverlay().setStroke("#3F51B5");
-            Drawing.drawRobot(packet.fieldOverlay(), drive.pose);
-            FtcDashboard.getInstance().sendTelemetryPacket(packet);
-
-            // Show the elapsed game time and wheel power.
-
-            telemetry.update();
+            while (timer.seconds() < 3) {
+                TelemetryPacket packet = new TelemetryPacket();
+                //Log telemetry for all four wheels
+                packet.put("Speed", speed);
+                packet.put("Front Left Speed", drive.leftFront.getVelocity());
+                packet.put("Front Right Speed", drive.rightFront.getVelocity());
+                packet.put("Back Left Speed", drive.leftBack.getVelocity());
+                packet.put("Back Right Speed", drive.rightBack.getVelocity());
+                dashboard.sendTelemetryPacket(packet);
+            }
+            speed++;
         }
+
     }
 }
 
