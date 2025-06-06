@@ -49,7 +49,7 @@ import java.util.List;
  */
 @Config
 @TeleOp(group = "drive")
-public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
+public class LEDTesting extends LinearOpMode {
     private String alliance = "BOTH";
 
     private Gamepad currentGamepad1 = new Gamepad();
@@ -70,69 +70,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam"), cameraMonitorViewId);
-
-        SamplePipeline samplePipeline = new SamplePipeline();
-        webcam.setPipeline(samplePipeline);
-
-        webcam.setMillisecondsPermissionTimeout(5000); // Timeout for obtaining permission is configurable. Set before opening.
-        webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
-        {
-            @Override
-            public void onOpened()
-            {
-                /*
-                 * Tell the webcam to start streaming images to us! Note that you must make sure
-                 * the resolution you specify is supported by the camera. If it is not, an exception
-                 * will be thrown.
-                 *
-                 * Keep in mind that the SDK's UVC driver (what OpenCvWebcam uses under the hood) only
-                 * supports streaming from the webcam in the uncompressed YUV image format. This means
-                 * that the maximum resolution you can stream at and still get up to 30FPS is 480p (640x480).
-                 * Streaming at e.g. 720p will limit you to up to 10FPS and so on and so forth.
-                 *
-                 * Also, we specify the rotation that the webcam is used in. This is so that the image
-                 * from the camera sensor can be rotated such that it is always displayed with the image upright.
-                 * For a front facing camera, rotation is defined assuming the user is looking at the screen.
-                 * For a rear facing camera or a webcam, rotation is defined assuming the camera is facing
-                 * away from the user.
-                 */
-                webcam.startStreaming(320, 240, OpenCvCameraRotation.SIDEWAYS_LEFT);
-            }
-
-            @Override
-            public void onError(int errorCode)
-            {
-                telemetry.addData("Webcam Fail", "Webcam generated an error");
-                telemetry.update();
-                /*
-                 * This will be called if the camera could not be opened
-                 */
-            }
-        });
-
-        FtcDashboard.getInstance().startCameraStream(webcam, 0);
 
         SparkFunOTOSDrive drive = new SparkFunOTOSDrive(hardwareMap, new Pose2d(0, 0, 0));
-        lift = hardwareMap.get(DcMotorEx.class, "lift");
-        gantry = hardwareMap.get(DcMotorEx.class, "gantry");
-
-        wrist = hardwareMap.get(Servo.class, "wrist");
-        gripper = hardwareMap.get(Servo.class, "gripper");
-
-        lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        gantry.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-
-        lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        gantry.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        lift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        gantry.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        //wrist.setPosition(0.5);
-        //ougripper.setPosition(0);
 
         telemetry.addLine("Pausing to allow OTOS to initialise");
         telemetry.update();
@@ -140,6 +79,27 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         telemetry.addLine("OTOS should be initialised");
         telemetry.update();
         telemetry.clear();
+
+        Gamepad.LedEffect rgbEffect1 = new Gamepad.LedEffect.Builder()
+                .addStep(0, 0, 1, 2500)
+                .build();
+        Gamepad.LedEffect rgbEffect2 = new Gamepad.LedEffect.Builder()
+                .addStep(1, 0, 0, 2500)
+                .build();
+
+        String team = "neutral";
+        telemetry.addLine("hat team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
+        telemetry.update();
+
+        while (team == "neutral")
+            if (gamepad1.cross) {
+                team = "blue";
+                gamepad1.runLedEffect(rgbEffect1);
+            }
+            else if (gamepad1.circle) {
+                team = "red";
+                gamepad1.runLedEffect(rgbEffect2);
+            }
 
 
         while(!isStarted() && !isStopRequested())
@@ -151,99 +111,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         ElapsedTime timer = new ElapsedTime();
 
         while (!isStopRequested()) {
-
-           //wrist.setPosition(1.0-Range.scale(samplePipeline.getSampleAngle(), -90., 90.0, 0.0, 1.0));
-
-            previousGamepad1.copy(currentGamepad1);
-            previousGamepad2.copy(currentGamepad2);
-            currentGamepad1.copy(gamepad1);
-            currentGamepad2.copy(gamepad2);
-
-            if(currentGamepad1.left_bumper || currentGamepad1.left_trigger > 0.5) {
-                power_multiplier = 0.25;
-            }
-            else if (currentGamepad1.right_bumper || currentGamepad1.right_trigger > 0.5){
-                power_multiplier = 1.0;
-            }
-            else {
-                power_multiplier = 0.4;
-            }
-
-            if (currentGamepad1.b && !previousGamepad1.b){
-                reverse = !reverse;
-            }
-
-            if (currentGamepad2.a && !previousGamepad2.a){
-                gripper.setPosition(1.0);
-            }
-
-            if (currentGamepad2.b && !previousGamepad2.b){
-                gripper.setPosition(0.0);
-            }
-
-         /*   if (currentGamepad2.x && !previousGamepad2.x){
-                wrist.setPosition(-1.0);
-            }
-
-            if (currentGamepad2.y && !previousGamepad2.y){
-                wrist.setPosition(1.0);
-            }
-
-            if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
-                wrist.setPosition(0.5);
-            }
-            else if (currentGamepad2.left_trigger >= 0.1)
-                wrist.setPosition(0.5+(currentGamepad2.left_trigger) / 2.0);
-            else if (currentGamepad2.right_trigger >= 0.1)
-                wrist.setPosition(0.5-(currentGamepad2.right_trigger / 2.0));
-
-
-          */
-            Rotation2d field_transform = drive.pose.heading.inverse();
-
-            lift.setPower(-currentGamepad2.left_stick_y);
-            gantry.setPower(currentGamepad2.right_stick_y);
-
-            if(reverse) {
-                telemetry.addLine("REVERSE");
-                Vector2d input = new Vector2d(
-                        -gamepad1.left_stick_y * power_multiplier,
-                        -gamepad1.left_stick_x * power_multiplier);
-
-                drive.setDrivePowers(new PoseVelocity2d(
-                        input,
-                        -gamepad1.right_stick_x * power_multiplier));
-
-            }
-            else {
-                Vector2d input = new Vector2d(
-                        gamepad1.left_stick_y * power_multiplier,
-                        gamepad1.left_stick_x * power_multiplier);
-
-                drive.setDrivePowers(new PoseVelocity2d(
-                        input,
-                        gamepad1.right_stick_x * power_multiplier));
-            }
-            drive.updatePoseEstimate();
-
-            telemetry.addData("x", drive.pose.position.x);
-            telemetry.addData("y", drive.pose.position.y);
-            telemetry.addData("lift", lift.getPower());
-            telemetry.addData("gantry", gantry.getPower());
-            telemetry.addData("heading (deg)", Math.toDegrees(drive.pose.heading.toDouble()));
-
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.fieldOverlay().setStroke("#3F51B5");
-            Drawing.drawRobot(packet.fieldOverlay(), drive.pose);
-            FtcDashboard.getInstance().sendTelemetryPacket(packet);
-
-            // Show the elapsed game time and wheel power.
-
-            telemetry.addData("front_left", drive.leftFront.getCurrentPosition());
-            telemetry.addData("front_right",  drive.rightFront.getCurrentPosition());
-            telemetry.addData("rear_left",  drive.leftBack.getCurrentPosition());
-            telemetry.addData("rear_right",  drive.rightBack.getCurrentPosition());
-            telemetry.update();
+            ;
         }
     }
     class SamplePipeline extends OpenCvPipeline
