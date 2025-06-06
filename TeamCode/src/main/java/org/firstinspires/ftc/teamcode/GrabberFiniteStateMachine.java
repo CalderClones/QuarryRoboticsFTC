@@ -37,5 +37,5 @@ public class GrabberFiniteStateMachine {
 
     double servo_delay = 250;
 
-    public Action move_lift_to_preset
+    public Action move_lift_to_preset;
 }
