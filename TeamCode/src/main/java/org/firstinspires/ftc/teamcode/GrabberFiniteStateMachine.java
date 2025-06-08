@@ -2,13 +2,38 @@ package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
-import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import com.acmerobotics.roadrunner.ftc.Actions;
 
 public class GrabberFiniteStateMachine {
+
+    public boolean isSampleDetected() {
+        return sampleDetected;
+    }
+
+    public void setSampleDetected(boolean sampleDetected) {
+        this.sampleDetected = sampleDetected;
+    }
+
+    public double getSampleAngle() {
+        return sampleAngle;
+    }
+
+    public void setSampleAngle(double sampleAngle) {
+        this.sampleAngle = sampleAngle;
+    }
+
+    public Vector2d getSampleOffset() {
+        return sampleOffset;
+    }
+
+    public void setSampleOffset(Vector2d sampleOffset) {
+        this.sampleOffset = sampleOffset;
+    }
 
     public enum GrabberState {
         SCANNING_REQUESTED,
@@ -23,27 +48,35 @@ public class GrabberFiniteStateMachine {
 
     ;
 
+    private LinearOpMode opMode;
+    private MecanumDrive drive;
     private Lift lift;
     private Arm arm;
     private Wrist wrist;
     private Gripper gripper;
+    private TrajectoryActionBuilder trajectoryToSample;
+    private TrajectoryActionBuilder returnTrajectoryFromSample;
 
-    Vector2d OffestToSample;
-    Vector2d returnOffsetFromSample;
+    private boolean sampleDetected;
+    private double sampleAngle;
+    private Vector2d sampleOffset;
 
-    double sampleAngle;
-    Vector2d sampleOffset;
+    private GrabberState grabberState;
 
-    GrabberState grabberState = GrabberState.DRIVING;
 
-    //timer used to allow us to wait for servo movements to complete
-    ElapsedTime grabberTimer = new ElapsedTime();
 
-    double servo_delay = 250;
+    public GrabberFiniteStateMachine(LinearOpMode opMode, MecanumDrive drive, Lift lift, Arm arm, Wrist wrist, Gripper gripper) {
+        this.opMode = opMode;
+        this.drive = drive;
+        this.lift = lift;
+        this.arm = arm;
+        this.wrist = wrist;
+        this.gripper = gripper;
 
-    public Action move_lift_to_preset;
+        this.setSampleDetected(false);
+        this.setSampleAngle(0);
+        this.setSampleOffset(new Vector2d(-0.5, -3));
 
-    public GrabberFiniteStateMachine() {
 
         grabberState = GrabberState.DRIVING;
 
@@ -65,7 +98,8 @@ public class GrabberFiniteStateMachine {
 
             case SCANNING:
                 //looking for samples - webcam lets us know when we've found one
-                if (true /*TODO: replace with condition for webcam has detected sample*/) {
+                if (isSampleDetected()) {
+                    /*TODO: make the gamepad LEDs light up in the appropriate colour*/
                     grabberState = GrabberState.SAMPLE_DETECTED;
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
@@ -78,20 +112,35 @@ public class GrabberFiniteStateMachine {
                 //we've found a sample - does the driver want to pick it up?
                 if (true /*TODO: replace with condition for grab button pressed on gamepad*/) {
                     //TODO: sampleAngle = latest angle returned by webcam
-                    //TODO: generate trajectoryToSample
-                    //TODO: generate returnTrajectoryFromSample
+
+                    Pose2d currentPose = drive.localizer.getPose();
+                    Vector2d samplePosition = new Vector2d(currentPose.position.x + getSampleOffset().x, currentPose.position.y + getSampleOffset().y);
+                    Pose2d samplePose = new Pose2d(samplePosition, currentPose.heading);
+                    Vector2d returnPosition = new Vector2d(currentPose.position.x, currentPose.position.y);
+
+                    trajectoryToSample = drive.actionBuilder(currentPose)
+                            .strafeTo(samplePosition);
+
+                    returnTrajectoryFromSample = drive.actionBuilder(samplePose)
+                            .strafeTo(returnPosition);
+
+                    Action driveToSample = trajectoryToSample.build();
 
                     Actions.runBlocking(
                             new ParallelAction(
-                                    //TODO: tell drivetrain to start following trajectoryToSample
+                                    driveToSample,
                                     lift.liftToGrabbing(),
-                                    wrist.wristToAngle(sampleAngle)
+                                    wrist.wristToAngle(getSampleAngle())
                             )
                     );
                     grabberState = GrabberState.MOVING_ROBOT_TO_SAMPLE;
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
                     grabberState = GrabberState.DRIVING;
+                }
+                if (!isSampleDetected()) {
+                    /*TODO: make the gamepad LEDs stop lighting up*/
+                    grabberState = GrabberState.SCANNING;
                 }
 
                 break;
@@ -114,9 +163,11 @@ public class GrabberFiniteStateMachine {
             case GRABBING_SAMPLE:
                 //servos are moving to grasp sample - has the gripper finished closing?
                 if (gripper.stationary()) {
+
+                    Action returnFromSample = returnTrajectoryFromSample.build();
                     Actions.runBlocking(
                             new ParallelAction(
-                                    //TODO: tell drivetrain to start following returnTrajectoryFromSample
+                                    returnFromSample,
                                     lift.liftToScanning(),
                                     wrist.wristToHome()
                             )
