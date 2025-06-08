@@ -43,7 +43,7 @@ public class Lift {
         this.liftMotor = hardwareMap.get(DcMotorEx.class, "arm_motor");
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        set_target_height(presets.get("Floor"));
+        set_target_height(0);
         liftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         this.limitSwitch = hardwareMap.get(TouchSensor.class, "lift_limit_switch");
@@ -51,7 +51,6 @@ public class Lift {
         this.target_height = 0.0;
         this.current_height = 0.0;
         this.tolerance = 3.0;
-
     }
 
     public class LiftTo implements Action {
@@ -78,47 +77,8 @@ public class Lift {
         }
     }
 
-    public Action liftToFloor()
-    {
-        return new LiftTo("Floor");
-    }
 
-    public Action liftToGrabbing()
-    {
-        return new LiftTo("Grabbing");
-    }
-    public Action liftToScanning()
-    {
-        return new LiftTo("Scanning");
-    }
-    public Action liftToLowBasket()
-    {
-        return new LiftTo("LowBasket");
-    }
-    public Action liftToHighBasket()
-    {
-        return new LiftTo("HighBasket");
-    }
-    public Action liftToLowChamber()
-    {
-        return new LiftTo("LowChamber");
-    }
-    public Action liftToLowChamberClipped()
-    {
-        return new LiftTo("LowChamberClipped");
-    }
-    public Action liftToHighChamber()
-    {
-        return new LiftTo("HighChamber");
-    }
-    public Action liftToHighChamberClipped()
-    {
-        return new LiftTo("HighChamberClipped");
-    }
-    public Action liftToCeiling()
-    {
-        return new LiftTo("Ceiling");
-    }
+
     public boolean move_to_preset(String preset) {
         if (presets.containsKey(preset))
         {
@@ -161,5 +121,46 @@ public class Lift {
     private double ticks_to_height(int ticks)
     {
         return ticks * TICKS_PER_MM + offset_from_floor;
+    }
+
+    public Action liftToFloor()
+    {
+        return new LiftTo("Floor");
+    }
+    public Action liftToGrabbing()
+    {
+        return new LiftTo("Grabbing");
+    }
+    public Action liftToScanning()
+    {
+        return new LiftTo("Scanning");
+    }
+    public Action liftToLowBasket()
+    {
+        return new LiftTo("LowBasket");
+    }
+    public Action liftToHighBasket()
+    {
+        return new LiftTo("HighBasket");
+    }
+    public Action liftToLowChamber()
+    {
+        return new LiftTo("LowChamber");
+    }
+    public Action liftToLowChamberClipped()
+    {
+        return new LiftTo("LowChamberClipped");
+    }
+    public Action liftToHighChamber()
+    {
+        return new LiftTo("HighChamber");
+    }
+    public Action liftToHighChamberClipped()
+    {
+        return new LiftTo("HighChamberClipped");
+    }
+    public Action liftToCeiling()
+    {
+        return new LiftTo("Ceiling");
     }
 }

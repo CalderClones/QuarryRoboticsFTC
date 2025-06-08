@@ -20,7 +20,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Drawing;
-import org.firstinspires.ftc.teamcode.SparkFunOTOSDrive;
+import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -114,7 +114,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
         FtcDashboard.getInstance().startCameraStream(webcam, 0);
 
-        SparkFunOTOSDrive drive = new SparkFunOTOSDrive(hardwareMap, new Pose2d(0, 0, 0));
+        MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
         lift = hardwareMap.get(DcMotorEx.class, "lift");
         gantry = hardwareMap.get(DcMotorEx.class, "gantry");
 
@@ -199,7 +199,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
 
           */
-            Rotation2d field_transform = drive.pose.heading.inverse();
+            Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
             lift.setPower(-currentGamepad2.left_stick_y);
             gantry.setPower(currentGamepad2.right_stick_y);
@@ -226,15 +226,15 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             }
             drive.updatePoseEstimate();
 
-            telemetry.addData("x", drive.pose.position.x);
-            telemetry.addData("y", drive.pose.position.y);
+            telemetry.addData("x", drive.localizer.getPose().position.x);
+            telemetry.addData("y", drive.localizer.getPose().position.y);
             telemetry.addData("lift", lift.getPower());
             telemetry.addData("gantry", gantry.getPower());
-            telemetry.addData("heading (deg)", Math.toDegrees(drive.pose.heading.toDouble()));
+            telemetry.addData("heading (deg)", Math.toDegrees(drive.localizer.getPose().heading.toDouble()));
 
             TelemetryPacket packet = new TelemetryPacket();
             packet.fieldOverlay().setStroke("#3F51B5");
-            Drawing.drawRobot(packet.fieldOverlay(), drive.pose);
+            Drawing.drawRobot(packet.fieldOverlay(), drive.localizer.getPose());
             FtcDashboard.getInstance().sendTelemetryPacket(packet);
 
             // Show the elapsed game time and wheel power.

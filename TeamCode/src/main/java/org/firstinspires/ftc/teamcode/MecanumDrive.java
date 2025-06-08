@@ -329,9 +329,6 @@ public final class MecanumDrive {
         FRScale.add(1.1, 1.0);
         FRScale.createLUT();
 
-
-        this.pose = pose;
-
         LynxFirmware.throwIfModulesAreOutdated(hardwareMap);
 
         for (LynxModule module : hardwareMap.getAll(LynxModule.class)) {
