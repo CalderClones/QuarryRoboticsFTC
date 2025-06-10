@@ -69,6 +69,18 @@ public class LEDTesting extends LinearOpMode {
         telemetry.update();
         telemetry.clear();
 
+        Gamepad.RumbleEffect rumblEffect = new Gamepad.RumbleEffect.Builder()
+                .addStep(1.0, 1.0, 100)  //  Rumble right motor 100% for 500 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 300 mSec
+                .addStep(1.0, 0.0, 100)  //  Rumble left motor 100% for 250 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 250 mSec
+                .addStep(1.0, 0.0, 100)  //  Rumble left motor 100% for 250 mSec
+                .build();
+
+
+        Gamepad.LedEffect rgbEffect0 = new Gamepad.LedEffect.Builder()
+                .addStep(1, 1, 0, 2500)
+                .build();
         Gamepad.LedEffect rgbEffect1 = new Gamepad.LedEffect.Builder()
                 .addStep(0, 0, 1, 2500)
                 .build();
@@ -76,20 +88,25 @@ public class LEDTesting extends LinearOpMode {
                 .addStep(1, 0, 0, 2500)
                 .build();
 
+        gamepad1.runLedEffect(rgbEffect0);
         String team = "neutral";
-        telemetry.addLine("hat team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
+        telemetry.addLine("What team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
         telemetry.update();
 
         while (team == "neutral")
             if (gamepad1.cross) {
                 team = "blue";
                 gamepad1.runLedEffect(rgbEffect1);
+                telemetry.addLine("Blue Alliance");
+                telemetry.update();
             }
             else if (gamepad1.circle) {
                 team = "red";
                 gamepad1.runLedEffect(rgbEffect2);
+                telemetry.addLine("Red Alliance");
+                telemetry.update();
             }
-
+            gamepad1.runRumbleEffect(rumblEffect);
 
         while(!isStarted() && !isStopRequested())
         {

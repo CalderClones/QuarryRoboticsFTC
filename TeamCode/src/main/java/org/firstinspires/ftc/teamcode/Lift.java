@@ -40,11 +40,11 @@ public class Lift {
         //measure this - how far off the floor is the gripper when the lift is on the floor?
         offset_from_floor = 20;
 
-        this.liftMotor = hardwareMap.get(DcMotorEx.class, "arm_motor");
+        this.liftMotor = hardwareMap.get(DcMotorEx.class, "lift_motor");
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        set_target_height(0);
         liftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        set_target_height(0);
 
         this.limitSwitch = hardwareMap.get(TouchSensor.class, "lift_limit_switch");
 
@@ -98,7 +98,7 @@ public class Lift {
     }
     public boolean set_target_height(double height)
     {
-        if (height >= presets.get("floor") && height <= presets.get("ceiling")) {
+        if (height >= presets.get("Floor") && height <= presets.get("Ceiling")) {
             liftMotor.setTargetPosition(height_to_ticks(height));
             return true;
         }

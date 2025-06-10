@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static com.qualcomm.robotcore.hardware.Gamepad.LED_DURATION_CONTINUOUS;
 import static org.opencv.core.Core.inRange;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2HSV;
 
@@ -15,12 +16,18 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.LED;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.Arm;
 import org.firstinspires.ftc.teamcode.Drawing;
+import org.firstinspires.ftc.teamcode.GrabberFiniteStateMachine;
+import org.firstinspires.ftc.teamcode.Gripper;
+import org.firstinspires.ftc.teamcode.Lift;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.Wrist;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -50,7 +57,8 @@ import java.util.List;
 @Config
 @TeleOp(group = "drive")
 public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
-    private String alliance = "BOTH";
+    private String alliance = "neutral";
+    private String start_pos = "left";
 
     private Gamepad currentGamepad1 = new Gamepad();
     private Gamepad currentGamepad2 = new Gamepad();
@@ -58,14 +66,14 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
     private Gamepad previousGamepad2 = new Gamepad();
     private boolean reverse = true;
     public double power_multiplier = 1.0;
-
-    private DcMotorEx lift;
-    private DcMotorEx gantry;
-
-    private Servo wrist;
-    private  Servo gripper;
-
     private OpenCvWebcam webcam;
+
+    private Lift lift;
+    private Arm arm;
+    private Wrist wrist;
+    private Gripper gripper;
+
+    private  GrabberFiniteStateMachine stateMachine;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -115,24 +123,11 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         FtcDashboard.getInstance().startCameraStream(webcam, 0);
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
-        lift = hardwareMap.get(DcMotorEx.class, "lift");
-        gantry = hardwareMap.get(DcMotorEx.class, "gantry");
-
-        wrist = hardwareMap.get(Servo.class, "wrist");
-        gripper = hardwareMap.get(Servo.class, "gripper");
-
-        lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        gantry.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-
-        lift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        gantry.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        lift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        gantry.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        //wrist.setPosition(0.5);
-        //ougripper.setPosition(0);
+        lift = new Lift(hardwareMap);
+        arm = new Arm(hardwareMap);
+        wrist = new Wrist(hardwareMap);
+        gripper = new Gripper(hardwareMap);
+        stateMachine = new GrabberFiniteStateMachine(this, drive, lift, arm, wrist, gripper);
 
         telemetry.addLine("Pausing to allow OTOS to initialise");
         telemetry.update();
@@ -141,9 +136,81 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         telemetry.update();
         telemetry.clear();
 
+        Gamepad.RumbleEffect rumbleEffect = new Gamepad.RumbleEffect.Builder()
+                .addStep(1.0, 1.0, 200)  //  Rumble right motor 100% for 500 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 300 mSec
+                .addStep(1.0, 0.0, 100)  //  Rumble left motor 100% for 250 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 250 mSec
+                .addStep(1.0, 0.0, 100)  //  Rumble left motor 100% for 250 mSec
+                .build();
 
+        Gamepad.RumbleEffect leftEffect = new Gamepad.RumbleEffect.Builder()
+                .addStep(1.0, 0.0, 100)  //  Rumble right motor 100% for 500 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 300 mSec
+                .addStep(1.0, 0.0, 100)  //  Rumble left motor 100% for 250 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 250 mSec
+                .build();
+
+        Gamepad.RumbleEffect rightEffect = new Gamepad.RumbleEffect.Builder()
+                .addStep(0.0, 1.0, 100)  //  Rumble right motor 100% for 500 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 300 mSec
+                .addStep(0.0, 1.0, 100)  //  Rumble left motor 100% for 250 mSec
+                .addStep(0.0, 0.0, 100)  //  Pause for 250 mSec
+                .build();
+
+
+        Gamepad.LedEffect whiteEffect = new Gamepad.LedEffect.Builder()
+                .addStep(1, 1, 1, LED_DURATION_CONTINUOUS)
+                .build();
+        Gamepad.LedEffect yellowEffect = new Gamepad.LedEffect.Builder()
+                .addStep(1, 1, 0, 2500)
+                .build();
+        Gamepad.LedEffect blueEffect = new Gamepad.LedEffect.Builder()
+                .addStep(0, 0, 1, 100)
+                .addStep(0, 0, 0, 100)
+                .addStep(0, 0, 1, 100)
+                .addStep(0, 0, 0, 100)
+                .addStep(0, 0, 1, 100)
+                .addStep(0, 0, 0, 100)
+                .addStep(0, 0, 1, LED_DURATION_CONTINUOUS)
+                .build();
+        Gamepad.LedEffect redEffect = new Gamepad.LedEffect.Builder()
+                .addStep(1, 0, 0, 100)
+                .addStep(0, 0, 0, 100)
+                .addStep(1, 0, 0, 100)
+                .addStep(0, 0, 0, 100)
+                .addStep(1, 0, 0, 100)
+                .addStep(0, 0, 0, 100)
+                .addStep(1, 0, 0, 0)
+                .build();
+
+        gamepad1.setLedColor(1,1,1,LED_DURATION_CONTINUOUS);
+        telemetry.addLine("What team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
+        telemetry.addLine("What starting position?. LEFT for left, RIGHT for right");
         while(!isStarted() && !isStopRequested())
         {
+            if (gamepad1.cross) {
+                alliance  = "Blue";
+                gamepad1.setLedColor(0,0,1,LED_DURATION_CONTINUOUS);
+                gamepad1.runRumbleEffect(rumbleEffect);
+                telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+            }
+            if (gamepad1.circle) {
+                alliance = "Red";
+                gamepad1.setLedColor(1,0,0,LED_DURATION_CONTINUOUS);
+                gamepad1.runRumbleEffect(rumbleEffect);
+                telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+            }
+            if (gamepad1.dpad_left) {
+                start_pos = "Left";
+                gamepad1.runRumbleEffect(leftEffect);
+                telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+            }
+            if (gamepad1.dpad_right) {
+                start_pos = "Right";
+                gamepad1.runRumbleEffect(rightEffect);
+                telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+            }
             telemetry.update();
             sleep(50);
         }
@@ -174,11 +241,11 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             }
 
             if (currentGamepad2.a && !previousGamepad2.a){
-                gripper.setPosition(1.0);
+                gripper.open();
             }
 
             if (currentGamepad2.b && !previousGamepad2.b){
-                gripper.setPosition(0.0);
+                gripper.close();
             }
 
          /*   if (currentGamepad2.x && !previousGamepad2.x){
@@ -201,8 +268,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
           */
             Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
-            lift.setPower(-currentGamepad2.left_stick_y);
-            gantry.setPower(currentGamepad2.right_stick_y);
+            //lift.setPower(-currentGamepad2.left_stick_y);
+            //gantry.setPower(currentGamepad2.right_stick_y);
 
             if(reverse) {
                 telemetry.addLine("REVERSE");
@@ -228,8 +295,6 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
             telemetry.addData("x", drive.localizer.getPose().position.x);
             telemetry.addData("y", drive.localizer.getPose().position.y);
-            telemetry.addData("lift", lift.getPower());
-            telemetry.addData("gantry", gantry.getPower());
             telemetry.addData("heading (deg)", Math.toDegrees(drive.localizer.getPose().heading.toDouble()));
 
             TelemetryPacket packet = new TelemetryPacket();
@@ -297,6 +362,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
 
         private double sampleAngle = 0.0;
+        private boolean sampleDetected = false;
+
 
 
         public Mat processFrame(Mat input)
@@ -413,11 +480,15 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
                     telemetry.addData("Angle with x-axis: ", 180-rectangle.angle);
                     this.sampleAngle = 180-rectangle.angle;
+                    this.sampleDetected = true;
                     Moments moments= Imgproc.moments(largestContour);
                     int centrex = (int)(moments.get_m10()/moments.get_m00());
                     int centrey = (int)(moments.get_m01()/moments.get_m00());
 
                     Imgproc.circle(input,new Point(centrex,centrey),7,new Scalar(255,0,255),-1);
+                }
+                else {
+                    this.sampleDetected = false;
                 }
             }
 
@@ -461,6 +532,14 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
         public void setSampleAngle(double sampleAngle) {
             this.sampleAngle = sampleAngle;
+        }
+
+        public boolean getSampleDetected() {
+            return sampleDetected;
+        }
+
+        public void setSampleDetected(boolean sampleDetected) {
+            this.sampleDetected = sampleDetected;
         }
     }
 }
