@@ -41,7 +41,9 @@ public class MeepMeepTesting {
 
                 //drive to first sample
                 .setReversed(true)
-                .splineToConstantHeading(new Vector2d(-47,-40), WEST)
+                //.strafeTo(new Vector2d(-47,-40))
+                //.splineToConstantHeading(new Vector2d(-47,-40), WEST)
+                .splineToLinearHeading(new Pose2d(-47,-40, NORTH), WEST)
                 // pause to simulate scanning and moving to sample
                 .waitSeconds(0.5)
                 // pause to simulate gripper closing
