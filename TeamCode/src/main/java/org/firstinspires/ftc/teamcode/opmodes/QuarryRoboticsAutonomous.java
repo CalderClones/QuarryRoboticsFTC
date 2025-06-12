@@ -43,7 +43,7 @@ import java.util.List;
 
 @Autonomous(name = "2025 Nationals Autonomous", group = "Auto")
 public class QuarryRoboticsAutonomous extends LinearOpMode {
-    private String alliance = "neutral";
+    private String alliance = "Both";
     private String start_pos = "left";
 
     private OpenCvWebcam webcam;
@@ -479,8 +479,8 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
 
         public Vector2d sampleLocation;
         //TODO: Tune this value
-        Vector2d cameraToGripper = new Vector2d(0.5, 3);
-        double PIXELS_PER_INCH = 320.0 / (230.0 / 25.4);
+        Vector2d cameraToGripper = new Vector2d(5.38 /25.40, 77.1/25.4);
+        double PIXELS_PER_INCH = 320.0 / (212 / 25.4);
         boolean viewportPaused;
         Scalar green = new Scalar(255, 255, 0);
 

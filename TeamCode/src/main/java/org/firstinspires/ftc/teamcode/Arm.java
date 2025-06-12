@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
 public class Arm {
-    private DcMotorEx armMotor;
+    public DcMotorEx armMotor;
     private TouchSensor limitSwitch;
     private DistanceSensor distanceSensor;
 
