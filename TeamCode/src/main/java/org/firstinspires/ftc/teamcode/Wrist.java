@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
 public class Wrist {
-    private final DcMotorEx wristMotor;
+    public final DcMotorEx wristMotor;
     private static final double TICKS_PER_DEGREE = 288 / 360.0;
 
     public Wrist(HardwareMap hardwareMap) {

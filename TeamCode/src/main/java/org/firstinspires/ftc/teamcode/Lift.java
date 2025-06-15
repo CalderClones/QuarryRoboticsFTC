@@ -8,11 +8,12 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.util.Range;
 
 import java.util.LinkedHashMap;
 
 public class Lift {
-    private DcMotorEx liftMotor;
+    public DcMotorEx liftMotor;
     private TouchSensor limitSwitch;
 
     private double offset_from_floor;
@@ -22,7 +23,7 @@ public class Lift {
     public LinkedHashMap<String, Integer> presets = new LinkedHashMap<String, Integer>();
     public String liftTargetPreset = "Floor";
 
-    private static final double TICKS_PER_MM = 28.0 / 44.0 * 3.0;
+    private static final double TICKS_PER_MM = 28.0 * (76.0 / 21.0) * (76.0 / 21.0) * (84.0 / 29.0)  / 44.0 / 3.0 / 3.0;
 
     public Lift(HardwareMap hardwareMap) {
         //these presets need to be tuned empirically
@@ -35,16 +36,18 @@ public class Lift {
         this.presets.put("LowChamberClipped", 280);
         this.presets.put("HighChamber", 300);
         this.presets.put("HighChamberClipped", 375);
-        this.presets.put("Ceiling", 425);
+        this.presets.put("Ceiling", 1200);
 
         //measure this - how far off the floor is the gripper when the lift is on the floor?
-        offset_from_floor = 20;
+        offset_from_floor = 0;
 
         this.liftMotor = hardwareMap.get(DcMotorEx.class, "lift_motor");
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        liftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         set_target_height(0);
+        liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        liftMotor.setPower(1.0);
+
 
         this.limitSwitch = hardwareMap.get(TouchSensor.class, "lift_limit_switch");
 
@@ -96,16 +99,15 @@ public class Lift {
     {
         return ticks_to_height(liftMotor.getCurrentPosition());
     }
-    public boolean set_target_height(double height)
+    public void set_target_height(double height) {
+        target_height = height;
+        liftMotor.setTargetPosition(height_to_ticks(Range.clip(target_height, presets.get("Floor"), presets.get("Ceiling"))));
+
+    }
+
+    public double get_target_height()
     {
-        if (height >= presets.get("Floor") && height <= presets.get("Ceiling")) {
-            liftMotor.setTargetPosition(height_to_ticks(height));
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return target_height;
     }
 
     public boolean stationary()
@@ -115,12 +117,12 @@ public class Lift {
 
     private int height_to_ticks(double height)
     {
-        return (int) ((height - offset_from_floor) / TICKS_PER_MM);
+        return (int) ((height - offset_from_floor) * TICKS_PER_MM);
     }
 
     private double ticks_to_height(int ticks)
     {
-        return ticks * TICKS_PER_MM + offset_from_floor;
+        return (ticks / TICKS_PER_MM) + offset_from_floor;
     }
 
     public Action liftToFloor()

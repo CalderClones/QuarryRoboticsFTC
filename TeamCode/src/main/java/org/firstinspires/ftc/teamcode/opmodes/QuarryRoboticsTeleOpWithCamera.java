@@ -127,7 +127,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         arm = new Arm(hardwareMap);
         wrist = new Wrist(hardwareMap);
         gripper = new Gripper(hardwareMap);
-        stateMachine = new GrabberFiniteStateMachine(this, drive, lift, arm, wrist, gripper);
+        //stateMachine = new GrabberFiniteStateMachine(this, drive, lift, arm, wrist, gripper);
 
         telemetry.addLine("Pausing to allow OTOS to initialise");
         telemetry.update();
@@ -211,6 +211,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                 gamepad1.runRumbleEffect(rightEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
             }
+            telemetry.addData("LiftTarget", lift.get_target_height());
+            telemetry.addData("LiftHeight", lift.getCurrentHeight());
             telemetry.update();
             sleep(50);
         }
@@ -268,6 +270,18 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
           */
             Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
+            if (currentGamepad2.dpad_up && !previousGamepad2.dpad_up){
+                lift.set_target_height( lift.get_target_height() + 5.0);
+            }
+            if (currentGamepad2.dpad_down && !previousGamepad2.dpad_down){
+                lift.set_target_height( lift.get_target_height() - 5.0);
+            }
+            if (currentGamepad2.dpad_left && !previousGamepad2.dpad_left){
+                lift.set_target_height(0);
+            }
+            if (currentGamepad2.dpad_right && !previousGamepad2.dpad_right){
+                lift.set_target_height(1000);
+            }
             //lift.setPower(-currentGamepad2.left_stick_y);
             //gantry.setPower(currentGamepad2.right_stick_y);
 
@@ -292,6 +306,13 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                         gamepad1.right_stick_x * power_multiplier));
             }
             drive.updatePoseEstimate();
+
+            telemetry.addData("LiftTarget", lift.get_target_height());
+            telemetry.addData("LiftHeight", lift.getCurrentHeight());
+
+
+            telemetry.addData("LiftTargetTicks", lift.liftMotor.getTargetPosition());
+            telemetry.addData("LiftHeightTicks", lift.liftMotor.getCurrentPosition());
 
             telemetry.addData("x", drive.localizer.getPose().position.x);
             telemetry.addData("y", drive.localizer.getPose().position.y);
@@ -422,7 +443,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                     }
                 }
 
-                telemetry.addData("largest contour area (pixels)", maxVal);
+                //telemetry.addData("largest contour area (pixels)", maxVal);
 
                 //only continue processing if we found a contour and it's big enough to possibly be a block
                 if (maxValIdx >= 0 && maxVal > 1000) {
@@ -478,7 +499,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                     double dotProduct = dot(axis, yourLine);
                     double angleFromVertical = Math.toDegrees(Math.acos(dotProduct));
 
-                    telemetry.addData("Angle with x-axis: ", 180-rectangle.angle);
+                    //telemetry.addData("Angle with x-axis: ", 180-rectangle.angle);
                     this.sampleAngle = 180-rectangle.angle;
                     this.sampleDetected = true;
                     Moments moments= Imgproc.moments(largestContour);
