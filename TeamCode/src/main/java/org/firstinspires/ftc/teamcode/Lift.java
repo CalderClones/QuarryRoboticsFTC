@@ -27,19 +27,18 @@ public class Lift {
 
     public Lift(HardwareMap hardwareMap) {
         //these presets need to be tuned empirically
-        this.presets.put("Floor", 0);
-        this.presets.put("Grabbing", 62);
-        this.presets.put("Scanning", 240);
-        this.presets.put("LowBasket", 240);
-        this.presets.put("HighBasket", 240);
-        this.presets.put("LowChamber", 260);
-        this.presets.put("LowChamberClipped", 280);
-        this.presets.put("HighChamber", 300);
-        this.presets.put("HighChamberClipped", 375);
-        this.presets.put("Ceiling", 1200);
+        this.presets.put("Floor", 11);  //Arm measures 11mm above floor when horizontal at lift lower limit
+        this.presets.put("Grabbing", 98); //Arm measures 98mm above floor when horizontal and at the right height to grab a sample
+        this.presets.put("Scanning", 240); // We measured 230mm as the best height for scanning
+        this.presets.put("LowBasket", 562); // Calculated. Assumes arm at 45 degrees
+        this.presets.put("HighBasket", 1000); // Calculated - 1092mm to lip of basket with arm at 45, sample should be 1117mm above floor - 25mm clearance
+        this.presets.put("LowChamber", 149);
+        this.presets.put("LowChamberClipped", 60);
+        this.presets.put("HighChamber", 475);
+        this.presets.put("HighChamberClipped", 386);
+        this.presets.put("Ceiling", 1050); // derived from cad model. Should give a little clearance to avoid smashing into top stop.
 
-        //measure this - how far off the floor is the gripper when the lift is on the floor?
-        offset_from_floor = 0;
+        offset_from_floor = 11;
 
         this.liftMotor = hardwareMap.get(DcMotorEx.class, "lift_motor");
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);

@@ -35,6 +35,14 @@ public class GrabberFiniteStateMachine {
         this.sampleOffset = sampleOffset;
     }
 
+    public GrabberState getGrabberState() {
+        return grabberState;
+    }
+
+    public void setGrabberState(GrabberState grabberState) {
+        this.grabberState = grabberState;
+    }
+
     public enum GrabberState {
         SCANNING_REQUESTED,
         SCANNING,
@@ -78,20 +86,20 @@ public class GrabberFiniteStateMachine {
         this.setSampleOffset(new Vector2d(-0.5, -3));
 
 
-        grabberState = GrabberState.DRIVING;
+        setGrabberState(GrabberState.DRIVING);
 
     }
 
     public void update() {
-        switch (grabberState) {
+        switch (getGrabberState()) {
             case SCANNING_REQUESTED:
                 //scanning has been requested - is the robot ready?
                 if (lift.stationary() && arm.stationary() && wrist.stationary() && gripper.stationary()) {
-                    grabberState = GrabberState.SCANNING;
+                    setGrabberState(GrabberState.SCANNING);
                 }
 
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
 
                 break;
@@ -100,10 +108,10 @@ public class GrabberFiniteStateMachine {
                 //looking for samples - webcam lets us know when we've found one
                 if (isSampleDetected()) {
                     /*TODO: make the gamepad LEDs light up in the appropriate colour*/
-                    grabberState = GrabberState.SAMPLE_DETECTED;
+                    setGrabberState(GrabberState.SAMPLE_DETECTED);
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
 
                 break;
@@ -133,14 +141,14 @@ public class GrabberFiniteStateMachine {
                                     wrist.wristToAngle(getSampleAngle())
                             )
                     );
-                    grabberState = GrabberState.MOVING_ROBOT_TO_SAMPLE;
+                    setGrabberState(GrabberState.MOVING_ROBOT_TO_SAMPLE);
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
                 if (!isSampleDetected()) {
                     /*TODO: make the gamepad LEDs stop lighting up*/
-                    grabberState = GrabberState.SCANNING;
+                    setGrabberState(GrabberState.SCANNING);
                 }
 
                 break;
@@ -152,10 +160,10 @@ public class GrabberFiniteStateMachine {
                     Actions.runBlocking(
                             gripper.gripperToClosed()
                     );
-                    grabberState = GrabberState.GRABBING_SAMPLE;
+                    setGrabberState(GrabberState.GRABBING_SAMPLE);
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
 
                 break;
@@ -172,10 +180,10 @@ public class GrabberFiniteStateMachine {
                                     wrist.wristToHome()
                             )
                     );
-                    grabberState = GrabberState.SAMPLE_COLLECTED;
+                    setGrabberState(GrabberState.SAMPLE_COLLECTED);
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
 
                 break;
@@ -183,10 +191,10 @@ public class GrabberFiniteStateMachine {
             case SAMPLE_COLLECTED:
                 //robot is returning to its initial condition - is it their yet?
                 if (true /*TODO: replace with condition for trajectory has completed && lift.stationary() && wrist.stationary/*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
                 if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
-                    grabberState = GrabberState.DRIVING;
+                    setGrabberState(GrabberState.DRIVING);
                 }
 
                 break;
@@ -202,7 +210,7 @@ public class GrabberFiniteStateMachine {
                                     gripper.gripperToOpen()
                             )
                     );
-                    grabberState = GrabberState.SCANNING_REQUESTED;
+                    setGrabberState(GrabberState.SCANNING_REQUESTED);
                 }
                 break;
         }
