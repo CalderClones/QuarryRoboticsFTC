@@ -40,6 +40,7 @@ import org.openftc.easyopencv.OpenCvWebcam;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Autonomous(name = "2025 Nationals Autonomous", group = "Auto")
 public class QuarryRoboticsAutonomous extends LinearOpMode {
@@ -565,16 +566,16 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 contours.addAll(yellowContours);
 
                 //ignore blue contours unless we are on the blue alliance or testing
-                if (alliance == "Blue" || alliance == "Both") {
+                if (Objects.equals(alliance, "Blue") || Objects.equals(alliance, "Both")) {
                     contours.addAll(blueContours);
                 }
                 //ignore red contours unless we are on the red alliance or testing
-                if (alliance == "Red" || alliance == "Both") {
+                if (Objects.equals(alliance, "Red") || Objects.equals(alliance, "Both")) {
                     contours.addAll(redContours);
                 }
 
                 //first safety net - did we detect any contours?
-                if (contours.size() > 0) {
+                if (!contours.isEmpty()) {
 
                     //find the largest contour by area
                     double maxVal = 0;
