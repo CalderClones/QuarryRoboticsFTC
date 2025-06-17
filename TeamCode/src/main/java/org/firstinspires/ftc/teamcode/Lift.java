@@ -45,8 +45,8 @@ public class Lift {
         this.liftMotor = hardwareMap.get(DcMotorEx.class, "lift_motor");
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         move_to_preset("Floor");
+        liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         liftMotor.setPower(1.0);
 
 

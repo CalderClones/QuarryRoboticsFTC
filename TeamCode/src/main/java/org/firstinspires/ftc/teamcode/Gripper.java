@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -17,6 +16,8 @@ public class Gripper {
     private static final double SERVO_DELAY = 250.0;
     private Servo gripperServo;
     private boolean gripperBusy;
+    private String position;
+
 
     public Gripper(HardwareMap hardwareMap) {
         this.gripperServo = hardwareMap.get(Servo.class, "gripper_servo");
@@ -26,23 +27,31 @@ public class Gripper {
 
     }
 
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String position) {
+        this.position = position;
+    }
+
     public class GripperTo implements Action {
         private ElapsedTime gripperTimer;
         private boolean initialized = false;
-        private String position;
 
-        public GripperTo(String position) {
+
+        public GripperTo(String newPosition) {
             gripperTimer = new ElapsedTime();
-            this.position = position;
+            setPosition(newPosition);
         }
 
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             if (!initialized) {
 
-                if (position == "Open") {
+                if (getPosition() == "Open") {
                     open();
-                } else if (position == "Closed") {
+                } else if (getPosition() == "Closed") {
                     close();
                 }
                 initialized = true;
@@ -61,10 +70,12 @@ public class Gripper {
 
     public void close() {
         gripperServo.setPosition(GRIPPER_CLOSED);
+        position = "Closed";
     }
 
     public void open() {
         gripperServo.setPosition(GRIPPER_OPEN);
+        position = "Open";
     }
 
     public boolean stationary()

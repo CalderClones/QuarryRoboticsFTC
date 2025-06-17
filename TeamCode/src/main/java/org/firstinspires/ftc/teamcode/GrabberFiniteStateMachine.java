@@ -8,6 +8,9 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import com.acmerobotics.roadrunner.ftc.Actions;
+import com.qualcomm.robotcore.hardware.Gamepad;
+
+import java.util.Objects;
 
 public class GrabberFiniteStateMachine {
 
@@ -43,6 +46,14 @@ public class GrabberFiniteStateMachine {
         this.grabberState = grabberState;
     }
 
+    public String getSampleColour() {
+        return sampleColour;
+    }
+
+    public void setSampleColour(String sampleColour) {
+        this.sampleColour = sampleColour;
+    }
+
     public enum GrabberState {
         SCANNING_REQUESTED,
         SCANNING,
@@ -52,9 +63,7 @@ public class GrabberFiniteStateMachine {
         SAMPLE_COLLECTED,
         DRIVING
 
-    }
-
-    ;
+    };
 
     private LinearOpMode opMode;
     private MecanumDrive drive;
@@ -68,12 +77,12 @@ public class GrabberFiniteStateMachine {
     private boolean sampleDetected;
     private double sampleAngle;
     private Vector2d sampleOffset;
-
+    private String sampleColour;
     private GrabberState grabberState;
 
 
 
-    public GrabberFiniteStateMachine(LinearOpMode opMode, MecanumDrive drive, Lift lift, Arm arm, Wrist wrist, Gripper gripper) {
+    public GrabberFiniteStateMachine(LinearOpMode opMode, SamplePipeline samplePipeline, MecanumDrive drive, Lift lift, Arm arm, Wrist wrist, Gripper gripper) {
         this.opMode = opMode;
         this.drive = drive;
         this.lift = lift;
@@ -90,15 +99,18 @@ public class GrabberFiniteStateMachine {
 
     }
 
-    public void update() {
+    public void update(Gamepad previous, Gamepad current) {
         switch (getGrabberState()) {
             case SCANNING_REQUESTED:
                 //scanning has been requested - is the robot ready?
                 if (lift.stationary() && arm.stationary() && wrist.stationary() && gripper.stationary()) {
+                    opMode.telemetry.addLine("Robot is stationary - switching state to SCANNING");
+
                     setGrabberState(GrabberState.SCANNING);
                 }
 
-                if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
+                if (current.b && !previous.b) {
+                    opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
 
@@ -107,10 +119,25 @@ public class GrabberFiniteStateMachine {
             case SCANNING:
                 //looking for samples - webcam lets us know when we've found one
                 if (isSampleDetected()) {
-                    /*TODO: make the gamepad LEDs light up in the appropriate colour*/
+                    opMode.telemetry.addLine("Sample detected");
+
+                    //rumble the gamepad
+                    current.rumble(500);
+
+                    if(Objects.equals(sampleColour, "Yellow")) {
+                        current.setLedColor(1,1,0,Gamepad.LED_DURATION_CONTINUOUS);
+                    }
+                    else if(Objects.equals(sampleColour, "Red")) {
+                        current.setLedColor(1,0, 0,Gamepad.LED_DURATION_CONTINUOUS);
+                    }
+                    if(Objects.equals(sampleColour, "Blue")) {
+                        current.setLedColor(0,0,1,Gamepad.LED_DURATION_CONTINUOUS);
+                    }
+
                     setGrabberState(GrabberState.SAMPLE_DETECTED);
                 }
-                if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
+                if (current.b && !previous.b) {
+                    opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
 
@@ -118,8 +145,10 @@ public class GrabberFiniteStateMachine {
 
             case SAMPLE_DETECTED:
                 //we've found a sample - does the driver want to pick it up?
-                if (true /*TODO: replace with condition for grab button pressed on gamepad*/) {
-                    //TODO: sampleAngle = latest angle returned by webcam
+                if (current.x && !previous.x) {
+                    opMode.telemetry.addLine("Grab pressed - moving to sample");
+                    current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
+                    setGrabberState(GrabberState.MOVING_ROBOT_TO_SAMPLE);
 
                     Pose2d currentPose = drive.localizer.getPose();
                     Vector2d samplePosition = new Vector2d(currentPose.position.x + getSampleOffset().x, currentPose.position.y + getSampleOffset().y);
@@ -141,28 +170,33 @@ public class GrabberFiniteStateMachine {
                                     wrist.wristToAngle(getSampleAngle())
                             )
                     );
-                    setGrabberState(GrabberState.MOVING_ROBOT_TO_SAMPLE);
+
                 }
-                if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
+                if (current.b && !previous.b) {
+                    current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
+                    opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
                 if (!isSampleDetected()) {
-                    /*TODO: make the gamepad LEDs stop lighting up*/
+                    opMode.telemetry.addLine("Sample Lost - switching state to SCANNING");
+                    current.rumble(100);
+                    current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
                     setGrabberState(GrabberState.SCANNING);
                 }
-
                 break;
 
             case MOVING_ROBOT_TO_SAMPLE:
-                //we're moving to the sample - have we reached it?
-                if (true /*TODO: replace with condition for trajectory to sample has completed && lift.stationary() && wrist.stationary()*/) {
+                //we're moving to the sample - have we reached it? Lets assume we only entered this state if the action completed.
+                if (lift.stationary() && wrist.stationary()) {
+                    opMode.telemetry.addLine("Lift in position - picking up sample");
 
                     Actions.runBlocking(
                             gripper.gripperToClosed()
                     );
                     setGrabberState(GrabberState.GRABBING_SAMPLE);
                 }
-                if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
+                if (current.b && !previous.b) {
+                    opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
 
@@ -171,6 +205,7 @@ public class GrabberFiniteStateMachine {
             case GRABBING_SAMPLE:
                 //servos are moving to grasp sample - has the gripper finished closing?
                 if (gripper.stationary()) {
+                    opMode.telemetry.addLine("Gripper closed - returning to original position");
 
                     Action returnFromSample = returnTrajectoryFromSample.build();
                     Actions.runBlocking(
@@ -182,7 +217,8 @@ public class GrabberFiniteStateMachine {
                     );
                     setGrabberState(GrabberState.SAMPLE_COLLECTED);
                 }
-                if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
+                if (current.b && !previous.b) {
+                    opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
 
@@ -190,10 +226,12 @@ public class GrabberFiniteStateMachine {
 
             case SAMPLE_COLLECTED:
                 //robot is returning to its initial condition - is it their yet?
-                if (true /*TODO: replace with condition for trajectory has completed && lift.stationary() && wrist.stationary/*/) {
+                if (lift.stationary() && wrist.stationary()) {
+                    opMode.telemetry.addLine("Sample collected - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
-                if (false /*TODO: replace with condition for cancel button pressed on gamepad*/) {
+                if (current.b && !previous.b) {
+                    opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                 }
 
@@ -201,7 +239,8 @@ public class GrabberFiniteStateMachine {
 
             case DRIVING:
                 //we're driving around. No automation until scan button is pressed
-                if (true /*TODO: replace with condition for scan button has been pressed*/) {
+                if (current.y && !previous.y) {
+                    opMode.telemetry.addLine("Scan pressed - moving lift to scanning position");
                     Actions.runBlocking(
                             new ParallelAction(
                                     lift.liftToScanning(),

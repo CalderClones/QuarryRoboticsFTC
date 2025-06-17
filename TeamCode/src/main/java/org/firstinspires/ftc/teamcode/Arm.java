@@ -19,7 +19,7 @@ public class Arm {
 
     //raw motor has 28 ticks per rotation
     //gearbox has 5:1, 5:1, 4:1 and 3:1 cardridges
-    private static final double TICKS_PER_DEGREE = 28.0 * (68.0/13.0) * (68.0 / 13.0) * (7.0 / 21.0) * (84.0 / 29.0) / 360.0;
+    private static final double TICKS_PER_DEGREE = 28.0 * (68.0/13.0) * (68.0 / 13.0) * (76.0 / 21.0) * (84.0 / 29.0) / 360.0;
 
     public Arm(HardwareMap hardwareMap)
     {
@@ -104,12 +104,12 @@ public class Arm {
     }
     private int angleToTicks(double angle)
     {
-        return (int) (angle * TICKS_PER_DEGREE);
+        return (int) (angle / TICKS_PER_DEGREE);
     }
 
     private double ticksToAngle(int ticks)
     {
-        return ticks / TICKS_PER_DEGREE;
+        return ticks * TICKS_PER_DEGREE;
 
     }
 
