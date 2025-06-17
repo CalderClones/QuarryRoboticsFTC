@@ -250,31 +250,26 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                 gripper.close();
             }
 
-         /*   if (currentGamepad2.x && !previousGamepad2.x){
-                wrist.setPosition(-1.0);
-            }
-
-            if (currentGamepad2.y && !previousGamepad2.y){
-                wrist.setPosition(1.0);
-            }
-
             if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
-                wrist.setPosition(0.5);
+                wrist.setTargetAngle(0);
             }
             else if (currentGamepad2.left_trigger >= 0.1)
-                wrist.setPosition(0.5+(currentGamepad2.left_trigger) / 2.0);
+                wrist.setTargetAngle(-90 / currentGamepad2.left_trigger);
             else if (currentGamepad2.right_trigger >= 0.1)
-                wrist.setPosition(0.5-(currentGamepad2.right_trigger / 2.0));
+                wrist.setTargetAngle(90 / currentGamepad2.right_trigger);
+
+            arm.setTargetAngle((gamepad2.right_stick_y * 90 + 45));
 
 
-          */
             Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
             if (currentGamepad2.dpad_up && !previousGamepad2.dpad_up){
-                lift.set_target_height( lift.get_target_height() + 5.0);
+                lift.nextPresetPosition();
+                telemetry.addData( "liftPreset", lift.liftTargetPreset);
             }
             if (currentGamepad2.dpad_down && !previousGamepad2.dpad_down){
-                lift.set_target_height( lift.get_target_height() - 5.0);
+                lift.previousPresetPosition();
+                telemetry.addData( "liftPreset", lift.liftTargetPreset);
             }
             if (currentGamepad2.dpad_left && !previousGamepad2.dpad_left){
                 lift.set_target_height(0);

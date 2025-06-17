@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import androidx.annotation.NonNull;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
@@ -23,14 +24,37 @@ public class Arm {
     public Arm(HardwareMap hardwareMap)
     {
         this.armMotor = hardwareMap.get(DcMotorEx.class, "arm_motor");
+        //TODO: Does this motor need to be reversed?
         armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         armMotor.setTargetPosition(0);
-        armMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        armMotor.setPower(1);
+        armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         this.limitSwitch = hardwareMap.get(TouchSensor.class, "arm_limit_switch");
         this.distanceSensor = hardwareMap.get(DistanceSensor.class, "arm_height_sensor");
 
+    }
+
+    public void reset()
+    {
+        armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armMotor.setPower(0);
+        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        armMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        while(limitSwitch.isPressed()) {
+            armMotor.setPower(0.05);
+        }
+
+        while(! limitSwitch.isPressed()) {
+        armMotor.setPower(-0.05);
+        }
+
+        armMotor.setPower(0);
+        armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armMotor.setTargetPosition(0);
+        armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
     }
 
     public class ArmTo implements Action {
@@ -61,11 +85,6 @@ public class Arm {
     }
 
 
-    public void reset()
-    {
-        //TODO: this should be a routine that raises the arm to vertical and then resets the encoder when the limit switch is triggered
-
-    }
     public boolean setTargetAngle(double newTargetAngle)
     {
         //validation - motor must be somewhere between vertical (0) and horizontal (90)

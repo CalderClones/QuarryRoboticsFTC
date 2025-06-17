@@ -16,10 +16,12 @@ public class Wrist {
 
     public Wrist(HardwareMap hardwareMap) {
         this.wristMotor = hardwareMap.get(DcMotorEx.class, "wrist_motor");
+        //TODO: Does this motor need to be reversed?
         wristMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         wristMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         wristMotor.setTargetPosition(0);
-        wristMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        wristMotor.setPower(1);
+        wristMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
     }
 
     public class WristTo implements Action {

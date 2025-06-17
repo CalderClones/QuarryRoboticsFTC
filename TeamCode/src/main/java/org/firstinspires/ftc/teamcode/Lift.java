@@ -10,7 +10,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.Range;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 public class Lift {
     public DcMotorEx liftMotor;
@@ -28,23 +30,23 @@ public class Lift {
     public Lift(HardwareMap hardwareMap) {
         //these presets need to be tuned empirically
         this.presets.put("Floor", 11);  //Arm measures 11mm above floor when horizontal at lift lower limit
+        this.presets.put("LowChamberClipped", 60); //Calculated - will definitely need tuning
         this.presets.put("Grabbing", 98); //Arm measures 98mm above floor when horizontal and at the right height to grab a sample
+        this.presets.put("LowChamber", 149); //Calculated - will definitely need tuning
         this.presets.put("Scanning", 240); // We measured 230mm as the best height for scanning
+        this.presets.put("HighChamberClipped", 386); //Calculated - will definitely need tuning
+        this.presets.put("HighChamber", 475); //Calculated - will definitely need tuning
         this.presets.put("LowBasket", 562); // Calculated. Assumes arm at 45 degrees
         this.presets.put("HighBasket", 1000); // Calculated - 1092mm to lip of basket with arm at 45, sample should be 1117mm above floor - 25mm clearance
-        this.presets.put("LowChamber", 149);
-        this.presets.put("LowChamberClipped", 60);
-        this.presets.put("HighChamber", 475);
-        this.presets.put("HighChamberClipped", 386);
         this.presets.put("Ceiling", 1050); // derived from cad model. Should give a little clearance to avoid smashing into top stop.
 
-        offset_from_floor = 11;
+        offset_from_floor = presets.get("Floor");
 
         this.liftMotor = hardwareMap.get(DcMotorEx.class, "lift_motor");
         liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        set_target_height(0);
         liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        move_to_preset("Floor");
         liftMotor.setPower(1.0);
 
 
@@ -163,5 +165,27 @@ public class Lift {
     public Action liftToCeiling()
     {
         return new LiftTo("Ceiling");
+    }
+
+    public void nextPresetPosition() {
+        List<String> keys = new ArrayList<>(presets.keySet());
+        for (int k = 0; k < keys.size(); k ++) {
+            if (keys.get(k) == liftTargetPreset && k < keys.size() -1) {
+                liftTargetPreset = keys.get(k + 1);
+                move_to_preset(liftTargetPreset);
+                return;
+            }
+        }
+    }
+
+    public void previousPresetPosition() {
+        List<String> keys = new ArrayList<>(presets.keySet());
+        for (int k = 0; k < keys.size(); k ++) {
+            if (keys.get(k) == liftTargetPreset && k > 0) {
+                liftTargetPreset = keys.get(k - 1);
+                move_to_preset(liftTargetPreset);
+                return;
+            }
+        }
     }
 }
