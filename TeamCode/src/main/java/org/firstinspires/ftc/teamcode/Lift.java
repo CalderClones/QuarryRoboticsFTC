@@ -73,10 +73,10 @@ public class Lift {
             double pos = getCurrentHeight();
             telemetryPacket.put("liftHeight", pos);
             if (stationary())
-                return true;
+                return false;
             else
             {
-                return false;
+                return true;
             }
         }
     }

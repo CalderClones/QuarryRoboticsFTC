@@ -13,6 +13,7 @@ import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -77,6 +78,12 @@ public class QuarryRoboticsMotorEncoderTest extends LinearOpMode {
         telemetry.addLine("OTOS should be initialised");
         telemetry.update();
         telemetry.clear();
+        lift.liftMotor.setPower(0);
+        lift.liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        wrist.wristMotor.setPower(0);
+        wrist.wristMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        arm.armMotor.setPower(0);
+        arm.armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         while (!isStarted() && !isStopRequested()) {
             telemetry.addData("LiftTarget", lift.get_target_height());

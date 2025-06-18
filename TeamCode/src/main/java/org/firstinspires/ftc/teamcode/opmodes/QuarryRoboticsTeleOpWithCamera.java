@@ -19,6 +19,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.LED;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Arm;
@@ -68,7 +69,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
     private Gamepad previousGamepad1 = new Gamepad();
     private Gamepad previousGamepad2 = new Gamepad();
     private boolean reverse = true;
-    public double power_multiplier = 1.0;
+    public double power_multiplier = 0.4;
     private OpenCvWebcam webcam;
 
     private Lift lift;
@@ -127,7 +128,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         arm = new Arm(hardwareMap);
         wrist = new Wrist(hardwareMap);
         gripper = new Gripper(hardwareMap);
-        //stateMachine = new GrabberFiniteStateMachine(this, drive, lift, arm, wrist, gripper);
+        stateMachine = new GrabberFiniteStateMachine(this, samplePipeline, drive, lift, arm, wrist, gripper);
 
         telemetry.addLine("Pausing to allow OTOS to initialise");
         telemetry.update();
@@ -184,39 +185,50 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                 .addStep(1, 0, 0, 0)
                 .build();
 
+        telemetry.addLine("Resetting arm");
+        telemetry.update();
+        arm.reset();
+        telemetry.addLine("Arm has been reset");
+        telemetry.update();
+
         gamepad1.setLedColor(1, 1, 1, LED_DURATION_CONTINUOUS);
         telemetry.addLine("What team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
         telemetry.addLine("What starting position?. LEFT for left, RIGHT for right");
+        telemetry.update();
         while (!isStarted() && !isStopRequested()) {
             if (gamepad1.cross) {
                 alliance = "Blue";
                 gamepad1.setLedColor(0, 0, 1, LED_DURATION_CONTINUOUS);
                 gamepad1.runRumbleEffect(rumbleEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
             if (gamepad1.circle) {
                 alliance = "Red";
                 gamepad1.setLedColor(1, 0, 0, LED_DURATION_CONTINUOUS);
                 gamepad1.runRumbleEffect(rumbleEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
             if (gamepad1.dpad_left) {
                 start_pos = "Left";
                 gamepad1.runRumbleEffect(leftEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
             if (gamepad1.dpad_right) {
                 start_pos = "Right";
                 gamepad1.runRumbleEffect(rightEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
-            telemetry.addData("LiftTarget", lift.get_target_height());
-            telemetry.addData("LiftHeight", lift.getCurrentHeight());
-            telemetry.update();
+
             sleep(50);
         }
 
         ElapsedTime timer = new ElapsedTime();
+
+
 
         while (!isStopRequested()) {
 
@@ -225,7 +237,10 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             currentGamepad1.copy(gamepad1);
             currentGamepad2.copy(gamepad2);
 
-            stateMachine.update(previousGamepad2, currentGamepad2);
+            if (previousGamepad1 != null && previousGamepad2 != null && currentGamepad1 != null && currentGamepad2 != null){
+                stateMachine.update(previousGamepad2, currentGamepad2);
+            }
+
 
             if (currentGamepad1.left_bumper || currentGamepad1.left_trigger > 0.5) {
                 power_multiplier = 0.25;
@@ -266,12 +281,14 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
                 wrist.setTargetAngle(0);
             } else if (currentGamepad2.left_trigger >= 0.1)
-                wrist.setTargetAngle(-90 / currentGamepad2.left_trigger);
+                wrist.setTargetAngle(-90 * currentGamepad2.left_trigger);
             else if (currentGamepad2.right_trigger >= 0.1)
-                wrist.setTargetAngle(90 / currentGamepad2.right_trigger);
+                wrist.setTargetAngle(90 * currentGamepad2.right_trigger);
 
-            arm.setTargetAngle((gamepad2.right_stick_y * 45) + 45);
-
+            if(stateMachine.getGrabberState() == GrabberFiniteStateMachine.GrabberState.DRIVING)
+            {
+                arm.setTargetAngle(Range.clip(gamepad2.right_stick_y * 90, 0, 90));
+            }
 
             Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
@@ -313,16 +330,16 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             }
             drive.updatePoseEstimate();
 
-            telemetry.addData("LiftTarget", lift.get_target_height());
-            telemetry.addData("LiftHeight", lift.getCurrentHeight());
+           // telemetry.addData("LiftTarget", lift.get_target_height());
+            //telemetry.addData("LiftHeight", lift.getCurrentHeight());
 
 
-            telemetry.addData("LiftTargetTicks", lift.liftMotor.getTargetPosition());
-            telemetry.addData("LiftHeightTicks", lift.liftMotor.getCurrentPosition());
+            //telemetry.addData("LiftTargetTicks", lift.liftMotor.getTargetPosition());
+            //telemetry.addData("LiftHeightTicks", lift.liftMotor.getCurrentPosition());
 
-            telemetry.addData("x", drive.localizer.getPose().position.x);
-            telemetry.addData("y", drive.localizer.getPose().position.y);
-            telemetry.addData("heading (deg)", Math.toDegrees(drive.localizer.getPose().heading.toDouble()));
+            //telemetry.addData("x", drive.localizer.getPose().position.x);
+            //telemetry.addData("y", drive.localizer.getPose().position.y);
+            //telemetry.addData("heading (deg)", Math.toDegrees(drive.localizer.getPose().heading.toDouble()));
 
             TelemetryPacket packet = new TelemetryPacket();
             packet.fieldOverlay().setStroke("#3F51B5");
@@ -331,10 +348,10 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
             // Show the elapsed game time and wheel power.
 
-            telemetry.addData("front_left", drive.leftFront.getCurrentPosition());
-            telemetry.addData("front_right", drive.rightFront.getCurrentPosition());
-            telemetry.addData("rear_left", drive.leftBack.getCurrentPosition());
-            telemetry.addData("rear_right", drive.rightBack.getCurrentPosition());
+            //telemetry.addData("front_left", drive.leftFront.getCurrentPosition());
+            //telemetry.addData("front_right", drive.rightFront.getCurrentPosition());
+            //telemetry.addData("rear_left", drive.leftBack.getCurrentPosition());
+            //telemetry.addData("rear_right", drive.rightBack.getCurrentPosition());
             telemetry.update();
         }
     }

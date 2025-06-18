@@ -79,6 +79,7 @@ public class GrabberFiniteStateMachine {
     private Vector2d sampleOffset;
     private String sampleColour;
     private GrabberState grabberState;
+    private SamplePipeline samplePipeline;
 
 
 
@@ -89,6 +90,7 @@ public class GrabberFiniteStateMachine {
         this.arm = arm;
         this.wrist = wrist;
         this.gripper = gripper;
+        this.samplePipeline = samplePipeline;
 
         this.setSampleDetected(false);
         this.setSampleAngle(0);
@@ -103,15 +105,17 @@ public class GrabberFiniteStateMachine {
         switch (getGrabberState()) {
             case SCANNING_REQUESTED:
                 //scanning has been requested - is the robot ready?
-                if (lift.stationary() && arm.stationary() && wrist.stationary() && gripper.stationary()) {
+                if (true){//lift.stationary() && arm.stationary() && wrist.stationary() && gripper.stationary()) {
                     opMode.telemetry.addLine("Robot is stationary - switching state to SCANNING");
-
+                    opMode.telemetry.update();
+                    samplePipeline.startScanning();
                     setGrabberState(GrabberState.SCANNING);
                 }
 
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
 
                 break;
@@ -120,6 +124,7 @@ public class GrabberFiniteStateMachine {
                 //looking for samples - webcam lets us know when we've found one
                 if (isSampleDetected()) {
                     opMode.telemetry.addLine("Sample detected");
+                    opMode.telemetry.update();
 
                     //rumble the gamepad
                     current.rumble(500);
@@ -139,6 +144,7 @@ public class GrabberFiniteStateMachine {
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
 
                 break;
@@ -176,6 +182,7 @@ public class GrabberFiniteStateMachine {
                     current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
                 if (!isSampleDetected()) {
                     opMode.telemetry.addLine("Sample Lost - switching state to SCANNING");
@@ -198,6 +205,7 @@ public class GrabberFiniteStateMachine {
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
 
                 break;
@@ -229,10 +237,12 @@ public class GrabberFiniteStateMachine {
                 if (lift.stationary() && wrist.stationary()) {
                     opMode.telemetry.addLine("Sample collected - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
 
                 break;
@@ -241,14 +251,24 @@ public class GrabberFiniteStateMachine {
                 //we're driving around. No automation until scan button is pressed
                 if (current.y && !previous.y) {
                     opMode.telemetry.addLine("Scan pressed - moving lift to scanning position");
+                    opMode.telemetry.update();
                     Actions.runBlocking(
-                            new ParallelAction(
-                                    lift.liftToScanning(),
-                                    arm.armToHorizontal(),
-                                    wrist.wristToHome(),
-                                    gripper.gripperToOpen()
-                            )
-                    );
+                                    lift.liftToScanning());
+                    opMode.telemetry.addLine("Lift is in the correct position.");
+                    opMode.telemetry.update();
+                    Actions.runBlocking(
+                                    arm.armToHorizontal());
+                    opMode.telemetry.addLine("Arm is in the correct position.");
+                    opMode.telemetry.update();
+                    Actions.runBlocking(
+                                    wrist.wristToHome());
+                    opMode.telemetry.addLine("Wrist in the correct position.");
+                    opMode.telemetry.update();
+                    Actions.runBlocking(
+                                    gripper.gripperToOpen());
+                    opMode.telemetry.addLine("Gripper is in the correct position.");
+                    opMode.telemetry.update();
+                    ;
                     setGrabberState(GrabberState.SCANNING_REQUESTED);
                 }
                 break;

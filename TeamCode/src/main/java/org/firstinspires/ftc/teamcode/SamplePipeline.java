@@ -148,6 +148,7 @@ public class SamplePipeline extends OpenCvPipeline {
                     }
                 }
 
+                /*
                 opMode.telemetry.addData("largest contour area (pixels)", maxVal);
                 if (yellowContours.contains(contours.get(maxValIdx))) {
                     //largest contour is yellow
@@ -160,7 +161,7 @@ public class SamplePipeline extends OpenCvPipeline {
                     setSampleColour("Blue");
                 } else {
                     setSampleColour("");
-                }
+                }*/
 
                 //only continue processing if we found a contour and it's big enough to possibly be a block
                 if (maxValIdx >= 0 && maxVal > 1000) {

@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
@@ -17,6 +18,7 @@ public class Wrist {
     public Wrist(HardwareMap hardwareMap) {
         this.wristMotor = hardwareMap.get(DcMotorEx.class, "wrist_motor");
         //TODO: Does this motor need to be reversed?
+        wristMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         wristMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         wristMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         wristMotor.setTargetPosition(0);
@@ -40,7 +42,12 @@ public class Wrist {
             }
             double pos = getCurrentAngle();
             telemetryPacket.put("wristAngle", pos);
-            return stationary();
+            if (stationary())
+                return false;
+            else
+            {
+                return true;
+            }
         }
     }
 
@@ -68,7 +75,7 @@ public class Wrist {
     }
 
     public boolean stationary() {
-        return !wristMotor.isBusy();
+        return !(wristMotor.isBusy());
     }
 
     public Action wristToHome()
