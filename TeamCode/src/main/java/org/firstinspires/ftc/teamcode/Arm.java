@@ -16,6 +16,9 @@ public class Arm {
     private TouchSensor limitSwitch;
     private DistanceSensor distanceSensor;
 
+    private double targetAngle = 0;
+    private double SPEED = 30;
+
 
     //raw motor has 28 ticks per rotation
     //gearbox has 5:1, 5:1, 4:1 and 3:1 cardridges
@@ -28,7 +31,7 @@ public class Arm {
         armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         armMotor.setTargetPosition(0);
-        armMotor.setPower(0.5);
+        armMotor.setPower(0.8);
         armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         this.limitSwitch = hardwareMap.get(TouchSensor.class, "arm_limit_switch");
@@ -81,7 +84,8 @@ public class Arm {
             }
             double pos = getCurrentAngle();
             telemetryPacket.put("armAngle", pos);
-            return stationary();
+            //This needs to return true when action is still running and false when not.
+            return !stationary();
         }
     }
 
@@ -94,11 +98,31 @@ public class Arm {
         }
         else
         {
-            armMotor.setTargetPosition(angleToTicks(newTargetAngle));
+            this.targetAngle = newTargetAngle;
+            armMotor.setTargetPosition(angleToTicks(targetAngle));
             return true;
         }
     }
 
+    public double getTargetAngle(){
+        return this.targetAngle;
+    }
+
+    public void moveArm(double multiplier)
+    {
+        setTargetAngle(getCurrentAngle() + SPEED * multiplier);
+
+    }
+
+    public void moveDown()
+    {
+        setTargetAngle(getTargetAngle()+SPEED);
+    }
+
+    public void moveUp()
+    {
+        setTargetAngle(getTargetAngle()-SPEED);
+    }
 
     public double getCurrentAngle()
     {

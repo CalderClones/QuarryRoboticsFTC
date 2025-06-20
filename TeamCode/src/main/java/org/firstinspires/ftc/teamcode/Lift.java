@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import java.util.ArrayList;
@@ -31,9 +32,9 @@ public class Lift {
         //these presets need to be tuned empirically
         this.presets.put("Floor", 11);  //Arm measures 11mm above floor when horizontal at lift lower limit
         this.presets.put("LowChamberClipped", 60); //Calculated - will definitely need tuning
-        this.presets.put("Grabbing", 98); //Arm measures 98mm above floor when horizontal and at the right height to grab a sample
+        this.presets.put("Grabbing", 120); //Arm measures 98mm above floor when horizontal and at the right height to grab a sample
         this.presets.put("LowChamber", 149); //Calculated - will definitely need tuning
-        this.presets.put("Scanning", 240); // We measured 230mm as the best height for scanning
+        this.presets.put("Scanning", 250); // We measured 230mm as the best height for scanning
         this.presets.put("HighChamberClipped", 386); //Calculated - will definitely need tuning
         this.presets.put("HighChamber", 475); //Calculated - will definitely need tuning
         this.presets.put("LowBasket", 562); // Calculated. Assumes arm at 45 degrees
@@ -72,15 +73,33 @@ public class Lift {
             }
             double pos = getCurrentHeight();
             telemetryPacket.put("liftHeight", pos);
-            if (stationary())
-                return false;
-            else
-            {
-                return true;
-            }
+            //This needs to return true when action is still running and false when not.
+            return !stationary();
         }
     }
 
+    public void reset()
+    {
+        ElapsedTime timer = new ElapsedTime();
+        liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        liftMotor.setPower(0);
+        liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        timer.reset();
+        while(timer.milliseconds() < 4000) {
+            liftMotor.setPower(-0.3);
+        }
+
+
+
+        liftMotor.setPower(0.05);
+        liftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        liftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftMotor.setTargetPosition(0);
+        liftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        liftMotor.setPower(1.0);
+    }
 
 
     public boolean move_to_preset(String preset) {

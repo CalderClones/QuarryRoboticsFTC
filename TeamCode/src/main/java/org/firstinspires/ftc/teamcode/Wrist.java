@@ -42,12 +42,8 @@ public class Wrist {
             }
             double pos = getCurrentAngle();
             telemetryPacket.put("wristAngle", pos);
-            if (stationary())
-                return false;
-            else
-            {
-                return true;
-            }
+            //This needs to return true when action is still running and false when not.
+            return !stationary();
         }
     }
 

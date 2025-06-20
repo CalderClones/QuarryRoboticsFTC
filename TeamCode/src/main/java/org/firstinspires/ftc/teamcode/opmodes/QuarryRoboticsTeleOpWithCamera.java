@@ -61,7 +61,7 @@ import java.util.Objects;
 @Config
 @TeleOp(group = "drive")
 public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
-    private String alliance = "neutral";
+    private String alliance = "Both";
     private String start_pos = "left";
 
     private Gamepad currentGamepad1 = new Gamepad();
@@ -130,6 +130,9 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         gripper = new Gripper(hardwareMap);
         stateMachine = new GrabberFiniteStateMachine(this, samplePipeline, drive, lift, arm, wrist, gripper);
 
+        telemetry.setAutoClear(false);
+        telemetry.setMsTransmissionInterval(50);
+
         telemetry.addLine("Pausing to allow OTOS to initialise");
         telemetry.update();
         sleep(1000);
@@ -185,6 +188,12 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                 .addStep(1, 0, 0, 0)
                 .build();
 
+        telemetry.addLine("Resetting lift");
+        telemetry.update();
+        lift.reset();
+        telemetry.addLine("Lift has been reset");
+        telemetry.update();
+
         telemetry.addLine("Resetting arm");
         telemetry.update();
         arm.reset();
@@ -195,6 +204,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         telemetry.addLine("What team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
         telemetry.addLine("What starting position?. LEFT for left, RIGHT for right");
         telemetry.update();
+
         while (!isStarted() && !isStopRequested()) {
             if (gamepad1.cross) {
                 alliance = "Blue";
@@ -226,10 +236,12 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             sleep(50);
         }
 
+        gamepad2.setLedColor(1,1,1,LED_DURATION_CONTINUOUS);
+
         ElapsedTime timer = new ElapsedTime();
 
 
-
+        samplePipeline.setAlliance(alliance);
         while (!isStopRequested()) {
 
             previousGamepad1.copy(currentGamepad1);
@@ -238,7 +250,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             currentGamepad2.copy(gamepad2);
 
             if (previousGamepad1 != null && previousGamepad2 != null && currentGamepad1 != null && currentGamepad2 != null){
-                stateMachine.update(previousGamepad2, currentGamepad2);
+                stateMachine.update(previousGamepad2, gamepad2);
             }
 
 
@@ -287,7 +299,9 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
             if(stateMachine.getGrabberState() == GrabberFiniteStateMachine.GrabberState.DRIVING)
             {
-                arm.setTargetAngle(Range.clip(gamepad2.right_stick_y * 90, 0, 90));
+                arm.moveArm(-gamepad2.right_stick_y);
+
+                //arm.setTargetAngle(Range.clip(gamepad2.right_stick_y * 90, 0, 90));
             }
 
             Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
@@ -310,7 +324,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             //gantry.setPower(currentGamepad2.right_stick_y);
 
             if (reverse) {
-                telemetry.addLine("REVERSE");
+                //telemetry.addLine("REVERSE");
                 Vector2d input = new Vector2d(
                         -gamepad1.left_stick_y * power_multiplier,
                         -gamepad1.left_stick_x * power_multiplier);

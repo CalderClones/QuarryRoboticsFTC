@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Rotation2d;
+import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -94,7 +96,7 @@ public class GrabberFiniteStateMachine {
 
         this.setSampleDetected(false);
         this.setSampleAngle(0);
-        this.setSampleOffset(new Vector2d(-0.5, -3));
+        this.setSampleOffset(new Vector2d(3, -0.5));
 
 
         setGrabberState(GrabberState.DRIVING);
@@ -122,21 +124,31 @@ public class GrabberFiniteStateMachine {
 
             case SCANNING:
                 //looking for samples - webcam lets us know when we've found one
-                if (isSampleDetected()) {
+                if (samplePipeline.isSampleDetected()) {
                     opMode.telemetry.addLine("Sample detected");
                     opMode.telemetry.update();
 
                     //rumble the gamepad
                     current.rumble(500);
 
-                    if(Objects.equals(sampleColour, "Yellow")) {
+                    if(Objects.equals(samplePipeline.getSampleColour(), "Yellow")) {
                         current.setLedColor(1,1,0,Gamepad.LED_DURATION_CONTINUOUS);
-                    }
-                    else if(Objects.equals(sampleColour, "Red")) {
+                        opMode.telemetry.addLine("It's Yellow");
+                        opMode.telemetry.update();
+                }
+                    else if(Objects.equals(samplePipeline.getSampleColour(), "Red")) {
                         current.setLedColor(1,0, 0,Gamepad.LED_DURATION_CONTINUOUS);
+                        opMode.telemetry.addLine("It's Red");
+                        opMode.telemetry.update();
                     }
-                    if(Objects.equals(sampleColour, "Blue")) {
+                    else if(Objects.equals(samplePipeline.getSampleColour(), "Blue")) {
                         current.setLedColor(0,0,1,Gamepad.LED_DURATION_CONTINUOUS);
+                        opMode.telemetry.addLine("It's Blue");
+                        opMode.telemetry.update();
+                    }
+                    else{
+                        opMode.telemetry.addLine("I don't know what colour it is");
+                        opMode.telemetry.update();
                     }
 
                     setGrabberState(GrabberState.SAMPLE_DETECTED);
@@ -154,12 +166,21 @@ public class GrabberFiniteStateMachine {
                 if (current.x && !previous.x) {
                     opMode.telemetry.addLine("Grab pressed - moving to sample");
                     current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
-                    setGrabberState(GrabberState.MOVING_ROBOT_TO_SAMPLE);
+
+                    Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
                     Pose2d currentPose = drive.localizer.getPose();
                     Vector2d samplePosition = new Vector2d(currentPose.position.x + getSampleOffset().x, currentPose.position.y + getSampleOffset().y);
-                    Pose2d samplePose = new Pose2d(samplePosition, currentPose.heading);
+
+
+                    Vector2d fieldSamplePosition = Rotation2d.exp(currentPose.heading.toDouble()).times(samplePosition);
+                    Pose2d samplePose = new Pose2d(fieldSamplePosition, currentPose.heading);
                     Vector2d returnPosition = new Vector2d(currentPose.position.x, currentPose.position.y);
+
+                    opMode.telemetry.addData("Current Pose", currentPose.position);
+                    opMode.telemetry.addData("Sample Pose", samplePose.position);
+                    opMode.telemetry.addData("Field Sample Pose", fieldSamplePosition);
+                    opMode.telemetry.addData("Return Vector", returnPosition);
 
                     trajectoryToSample = drive.actionBuilder(currentPose)
                             .strafeTo(samplePosition);
@@ -169,13 +190,19 @@ public class GrabberFiniteStateMachine {
 
                     Action driveToSample = trajectoryToSample.build();
 
+                    opMode.telemetry.addData("Wrist Target Angle", -samplePipeline.getSampleAngle());
+
+
                     Actions.runBlocking(
-                            new ParallelAction(
-                                    driveToSample,
-                                    lift.liftToGrabbing(),
-                                    wrist.wristToAngle(getSampleAngle())
+                            new SequentialAction(
+                                new ParallelAction(
+                                        driveToSample,
+                                        wrist.wristToAngle(-samplePipeline.getSampleAngle())
+                                ),
+                                    lift.liftToGrabbing()
                             )
                     );
+                    setGrabberState(GrabberState.MOVING_ROBOT_TO_SAMPLE);
 
                 }
                 if (current.b && !previous.b) {
@@ -184,7 +211,7 @@ public class GrabberFiniteStateMachine {
                     setGrabberState(GrabberState.DRIVING);
                     samplePipeline.stopScanning();
                 }
-                if (!isSampleDetected()) {
+                if (!samplePipeline.isSampleDetected()) {
                     opMode.telemetry.addLine("Sample Lost - switching state to SCANNING");
                     current.rumble(100);
                     current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
@@ -194,7 +221,8 @@ public class GrabberFiniteStateMachine {
 
             case MOVING_ROBOT_TO_SAMPLE:
                 //we're moving to the sample - have we reached it? Lets assume we only entered this state if the action completed.
-                if (lift.stationary() && wrist.stationary()) {
+                if (true) {
+                    opMode.telemetry.addData("Actual Wrist Angle", wrist.getCurrentAngle());
                     opMode.telemetry.addLine("Lift in position - picking up sample");
 
                     Actions.runBlocking(
@@ -212,7 +240,7 @@ public class GrabberFiniteStateMachine {
 
             case GRABBING_SAMPLE:
                 //servos are moving to grasp sample - has the gripper finished closing?
-                if (gripper.stationary()) {
+                if (true) {
                     opMode.telemetry.addLine("Gripper closed - returning to original position");
 
                     Action returnFromSample = returnTrajectoryFromSample.build();
@@ -253,22 +281,18 @@ public class GrabberFiniteStateMachine {
                     opMode.telemetry.addLine("Scan pressed - moving lift to scanning position");
                     opMode.telemetry.update();
                     Actions.runBlocking(
-                                    lift.liftToScanning());
-                    opMode.telemetry.addLine("Lift is in the correct position.");
-                    opMode.telemetry.update();
-                    Actions.runBlocking(
-                                    arm.armToHorizontal());
-                    opMode.telemetry.addLine("Arm is in the correct position.");
-                    opMode.telemetry.update();
-                    Actions.runBlocking(
-                                    wrist.wristToHome());
-                    opMode.telemetry.addLine("Wrist in the correct position.");
-                    opMode.telemetry.update();
-                    Actions.runBlocking(
-                                    gripper.gripperToOpen());
+                            new SequentialAction(
+                            new ParallelAction(
+                                    lift.liftToScanning(),
+                                    arm.armToHorizontal(),
+                                    wrist.wristToHome()
+                    ),
+                    new ParallelAction(
+                                    gripper.gripperToOpen()
+                    )));
                     opMode.telemetry.addLine("Gripper is in the correct position.");
                     opMode.telemetry.update();
-                    ;
+
                     setGrabberState(GrabberState.SCANNING_REQUESTED);
                 }
                 break;

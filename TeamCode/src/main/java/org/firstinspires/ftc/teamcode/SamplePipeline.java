@@ -3,9 +3,11 @@ package org.firstinspires.ftc.teamcode;
 import static org.opencv.core.Core.inRange;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2HSV;
 
+import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
+import org.firstinspires.ftc.robotcore.internal.camera.delegating.DelegatingCaptureSequence;
 import org.firstinspires.ftc.teamcode.opmodes.QuarryRoboticsAutonomous;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -27,11 +29,11 @@ public class SamplePipeline extends OpenCvPipeline {
 
 
     private final OpMode opMode;
-    private final String alliance;
+    private String alliance;
     private final OpenCvWebcam webcam;
     public Vector2d sampleLocation;
     //TODO: Tune this value
-    Vector2d cameraToGripper = new Vector2d(5.38 / 25.40, 77.1 / 25.4);
+    Vector2d cameraToGripper = new Vector2d(-5.38 / 25.40, -77.1 / 25.4);
     double PIXELS_PER_INCH = 320.0 / (212 / 25.4);
     boolean viewportPaused;
     Scalar green = new Scalar(255, 255, 0);
@@ -61,9 +63,10 @@ public class SamplePipeline extends OpenCvPipeline {
     Mat yellowHierarchy = new Mat();
     Mat redHierarchy = new Mat();
     List<MatOfPoint> yellowContours = new ArrayList<>();
-    List<MatOfPoint> redContours = new ArrayList<>();
-    List<MatOfPoint> blueContours = new ArrayList<>();
+    List<MatOfPoint> allianceContours = new ArrayList<>();
     List<MatOfPoint> contours = new ArrayList<>();
+    MatOfPoint2f largestYellowContour = new MatOfPoint2f();
+    MatOfPoint2f largestAllianceContour = new MatOfPoint2f();
     MatOfPoint2f largestContour = new MatOfPoint2f();
     Mat points = new Mat();
     Mat lineParams = new MatOfPoint2f();
@@ -91,7 +94,6 @@ public class SamplePipeline extends OpenCvPipeline {
 
     public Mat processFrame(Mat input) {
 
-
         //allows auto do disable scanning when not needed to save CPU cycles
         if (scanning) {
             // Convert image to HSV for easier processing
@@ -112,129 +114,164 @@ public class SamplePipeline extends OpenCvPipeline {
 
             //clear all the contour lists so they start empty
             yellowContours.clear();
-            redContours.clear();
-            blueContours.clear();
+            allianceContours.clear();
             contours.clear();
 
             //find the contours within the yellow, red and blue masks
             Imgproc.findContours(maskYellow, yellowContours, yellowHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-            Imgproc.findContours(maskRed, redContours, redHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-            Imgproc.findContours(maskBlue, blueContours, blueHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
-            //generally speaking we are always interested in yellow samples
-            contours.addAll(yellowContours);
-
-            //ignore blue contours unless we are on the blue alliance or testing
-            if (Objects.equals(alliance, "Blue") || Objects.equals(alliance, "Both")) {
-                contours.addAll(blueContours);
+            if(alliance == "Red" || alliance == "Both") {
+                Imgproc.findContours(maskRed, allianceContours, redHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             }
-            //ignore red contours unless we are on the red alliance or testing
-            if (Objects.equals(alliance, "Red") || Objects.equals(alliance, "Both")) {
-                contours.addAll(redContours);
+            else if(alliance == "Blue"|| alliance == "Both")
+            {
+                Imgproc.findContours(maskBlue, allianceContours, blueHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             }
 
-            //first safety net - did we detect any contours?
-            if (!contours.isEmpty()) {
+            boolean foundContours = false;
+            double largestYellowArea = 0;
+            double largestAllianceArea = 0;
+
+            // Find largest yellow Contour
+            if (!yellowContours.isEmpty()) {
 
                 //find the largest contour by area
                 double maxVal = 0;
                 int maxValIdx = -1;
 
-                for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
-                    double contourArea = Imgproc.contourArea(contours.get(contourIdx));
+                for (int contourIdx = 0; contourIdx < yellowContours.size(); contourIdx++) {
+                    double contourArea = Imgproc.contourArea(yellowContours.get(contourIdx));
                     if (maxVal < contourArea) {
                         maxVal = contourArea;
                         maxValIdx = contourIdx;
                     }
                 }
 
-                /*
-                opMode.telemetry.addData("largest contour area (pixels)", maxVal);
-                if (yellowContours.contains(contours.get(maxValIdx))) {
-                    //largest contour is yellow
-                    setSampleColour("Yellow");
-                } else if (redContours.contains(contours.get(maxValIdx))) {
-                    //largest contour is red
-                    setSampleColour("Red");
-                } else if (blueContours.contains(contours.get(maxValIdx))) {
-                    //largest contour is blue
-                    setSampleColour("Blue");
-                } else {
-                    setSampleColour("");
-                }*/
+                //only continue processing if we found a contour and it's big enough to possibly be a block
+                if (maxValIdx >= 0 && maxVal > 1000) {
+                    foundContours = true;
+
+                    //convert largestContour to a MatofPoint2F
+                    largestYellowContour = new MatOfPoint2f(yellowContours.get(maxValIdx).toArray());
+                    largestYellowArea = Imgproc.contourArea(yellowContours.get(maxValIdx));
+                }
+            }
+            else {
+                largestYellowContour = null;
+                largestYellowArea = 0;
+            }
+
+            // Find largest alliance Contour
+            if (!allianceContours.isEmpty()) {
+
+                //find the largest contour by area
+                double maxVal = 0;
+                int maxValIdx = -1;
+
+                for (int contourIdx = 0; contourIdx < allianceContours.size(); contourIdx++) {
+                    double contourArea = Imgproc.contourArea(allianceContours.get(contourIdx));
+                    if (maxVal < contourArea) {
+                        maxVal = contourArea;
+                        maxValIdx = contourIdx;
+                    }
+                }
 
                 //only continue processing if we found a contour and it's big enough to possibly be a block
                 if (maxValIdx >= 0 && maxVal > 1000) {
-
+                    foundContours = true;
                     //convert largestContour to a MatofPoint2F
-                    largestContour = new MatOfPoint2f(contours.get(maxValIdx).toArray());
-
-                    //find the vertices of the smallest possible rotated bounding box (because samples are rectangular)
-                    RotatedRect rectangle = Imgproc.fitEllipse(largestContour);
-
-                    Imgproc.minAreaRect(largestContour).points(vertices);
-                    List<MatOfPoint> boxContours = new ArrayList<>();
-                    boxContours.add(new MatOfPoint(vertices));
-
-
-                    //draw the bounding box on the input in blue
-                    Imgproc.drawContours(input, boxContours, 0, new Scalar(0, 0, 255), 5);
+                    largestAllianceContour = new MatOfPoint2f(allianceContours.get(maxValIdx).toArray());
+                    largestAllianceArea = Imgproc.contourArea(allianceContours.get(maxValIdx));
+                }
+            }else
+            {
+                largestAllianceContour = null;
+                largestAllianceArea = 0;
+            }
 
 
-                    /**
-                     * NOTE: to see how to get data from your pipeline to your OpMode as well as how
-                     * to change which stage of the pipeline is rendered to the viewport when it is
-                     * tapped, please see {@link PipelineStageSwitchingExample}
-                     */
 
-                    int cols = 240;
-
-                    // Prepare the variables
-
-
-                    // Fit line to the largest shape
-                    //points = new MatOfPoint(vertices);
-                    Imgproc.fitLine(largestContour, lineParams, Imgproc.DIST_L2, 0, 0.01, 0.01);
-                    lineParams.get(0, 0, line);
-
-                    double vx = line[0];
-                    double vy = line[1];
-                    double x = line[2];
-                    double y = line[3];
-
-                    // Calculate left and right of screen y intercepts
-                    int lefty = (int) ((-x * vy / vx) + y);
-                    int righty = (int) (((cols - x) * vy / vx) + y);
-
-                    // Draw a line across the whole screen to show the major axis of the sample
-                    Imgproc.line(input, new Point(cols - 1, righty), new Point(0, lefty), new Scalar(0, 255, 0), 2);
-
-                    //set up to calculate angle of the line from vertical
-                    double[] axis = {-1, 0}; // unit vector in the same direction as the zero axis
-                    double[] yourLine = {vx, vy}; // unit vector in the same direction as your line
-
-                    // Calculate the dot product
-                    double dotProduct = dot(axis, yourLine);
-                    double angleFromVertical = Math.toDegrees(Math.acos(dotProduct));
-
-                    opMode.telemetry.addData("Angle with x-axis: ", 180 - rectangle.angle);
-                    this.setSampleAngle(180 - rectangle.angle);
-                    this.setSampleDetected(true);
-                    Moments moments = Imgproc.moments(largestContour);
-                    int centrex = (int) (moments.get_m10() / moments.get_m00());
-                    int centrey = (int) (moments.get_m01() / moments.get_m00());
-
-
-                    double sampleCentreXInches = (centrex - 120) / PIXELS_PER_INCH;
-                    double sampleCentreYInches = (160 - centrey) / PIXELS_PER_INCH;
-
-                    sampleLocation = cameraToGripper.plus(new Vector2d(sampleCentreXInches, sampleCentreYInches));
-
-                    Imgproc.circle(input, new Point(centrex, centrey), 7, new Scalar(255, 0, 255), -1);
+            if (largestYellowArea == 0 && largestAllianceArea == 0) {
+                foundContours = false;
+            }
+            else{
+                if (largestYellowArea > largestAllianceArea) {
+                    largestContour = largestYellowContour;
+                    sampleColour = "Yellow";
                 } else {
-                    this.setSampleDetected(false);
+                    largestContour = largestAllianceContour;
+                    sampleColour = alliance;
                 }
             }
+
+            if (foundContours)
+            {
+
+                //find the vertices of the smallest possible rotated bounding box (because samples are rectangular)
+                RotatedRect rectangle = Imgproc.fitEllipse(largestContour);
+
+                Imgproc.minAreaRect(largestContour).points(vertices);
+                List<MatOfPoint> boxContours = new ArrayList<>();
+                boxContours.add(new MatOfPoint(vertices));
+
+
+                //draw the bounding box on the input in blue
+                Imgproc.drawContours(input, boxContours, 0, new Scalar(0, 0, 255), 5);
+
+
+                /**
+                 * NOTE: to see how to get data from your pipeline to your OpMode as well as how
+                 * to change which stage of the pipeline is rendered to the viewport when it is
+                 * tapped, please see {@link PipelineStageSwitchingExample}
+                 */
+
+                int cols = 240;
+
+                // Prepare the variables
+
+
+                // Fit line to the largest shape
+                //points = new MatOfPoint(vertices);
+                Imgproc.fitLine(largestContour, lineParams, Imgproc.DIST_L2, 0, 0.01, 0.01);
+                lineParams.get(0, 0, line);
+
+                double vx = line[0];
+                double vy = line[1];
+                double x = line[2];
+                double y = line[3];
+
+                // Calculate left and right of screen y intercepts
+                int lefty = (int) ((-x * vy / vx) + y);
+                int righty = (int) (((cols - x) * vy / vx) + y);
+
+                // Draw a line across the whole screen to show the major axis of the sample
+                Imgproc.line(input, new Point(cols - 1, righty), new Point(0, lefty), new Scalar(0, 255, 0), 2);
+
+                //set up to calculate angle of the line from vertical
+                double[] axis = {-1, 0}; // unit vector in the same direction as the zero axis
+                double[] yourLine = {vx, vy}; // unit vector in the same direction as your line
+
+                // Calculate the dot product
+                double dotProduct = dot(axis, yourLine);
+                double angleFromVertical = Math.toDegrees(Math.acos(dotProduct));
+
+                //opMode.telemetry.addData("Angle with x-axis: ", 180 - rectangle.angle);
+                this.setSampleAngle(180 - rectangle.angle);
+                this.setSampleDetected(true);
+                Moments moments = Imgproc.moments(largestContour);
+                int centrex = (int) (moments.get_m10() / moments.get_m00());
+                int centrey = (int) (moments.get_m01() / moments.get_m00());
+
+
+                double sampleCentreXInches = (centrex - 120) / PIXELS_PER_INCH;
+                double sampleCentreYInches = (160 - centrey) / PIXELS_PER_INCH;
+
+                sampleLocation = cameraToGripper.plus(new Vector2d(-sampleCentreXInches, -sampleCentreYInches));
+
+                Imgproc.circle(input, new Point(centrex, centrey), 7, new Scalar(255, 0, 255), -1);
+            } else {
+                this.setSampleDetected(false);
+            }
+
         } else {
             this.setSampleDetected(false);
         }
@@ -295,5 +332,9 @@ public class SamplePipeline extends OpenCvPipeline {
 
     public boolean isSampleDetected() {
         return sampleDetected;
+    }
+
+    public void setAlliance(String alliance) {
+        this.alliance = alliance;
     }
 }

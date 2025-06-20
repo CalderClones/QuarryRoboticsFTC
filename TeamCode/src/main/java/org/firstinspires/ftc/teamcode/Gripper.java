@@ -13,7 +13,7 @@ public class Gripper {
     //servo positions need to be confirmed empirically
     private static final double GRIPPER_OPEN = 0.0;
     private static final double GRIPPER_CLOSED = 1.0;
-    private static final double SERVO_DELAY = 250.0;
+    private static final double SERVO_DELAY = 1000.0;
     private Servo gripperServo;
     private boolean gripperBusy;
     private String position;
@@ -58,13 +58,12 @@ public class Gripper {
                 gripperBusy = true;
                 gripperTimer.reset();
             }
-            double timeToClose = SERVO_DELAY - gripperTimer.milliseconds();
-            telemetryPacket.put("timeToClose", timeToClose);
-            if (timeToClose <= 0){
+            telemetryPacket.put("gripperTimer", gripperTimer.milliseconds());
+            if (gripperTimer.milliseconds() > SERVO_DELAY){
                 gripperBusy = false;
             }
-            //return false if the servo still has time to close otherwise return true to indicate movement has finished
-            return (!gripperBusy);
+            //return true if the servo still has time to close otherwise return false to indicate movement has finished
+            return (gripperBusy);
         }
     }
 
