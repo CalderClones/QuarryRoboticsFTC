@@ -14,7 +14,7 @@ public class Gripper {
     private static final double GRIPPER_OPEN = 0.0;
     private static final double GRIPPER_CLOSED = 1.0;
     private static final double SERVO_DELAY = 1000.0;
-    private Servo gripperServo;
+    private final Servo gripperServo;
     private boolean gripperBusy;
     private String position;
 
@@ -36,7 +36,7 @@ public class Gripper {
     }
 
     public class GripperTo implements Action {
-        private ElapsedTime gripperTimer;
+        private final ElapsedTime gripperTimer;
         private boolean initialized = false;
 
 

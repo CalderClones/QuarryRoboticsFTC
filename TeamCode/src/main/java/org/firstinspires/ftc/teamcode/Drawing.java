@@ -19,4 +19,24 @@ public final class Drawing {
         Vector2d p2 = p1.plus(halfv);
         c.strokeLine(p1.x, p1.y, p2.x, p2.y);
     }
+    public static void drawCamera(Canvas c, Vector2d t) {
+        final double CAMERA_RADIUS = 3;
+
+        c.setStrokeWidth(1);
+        c.strokeCircle(t.x, t.y, CAMERA_RADIUS);
+
+    }
+    public static void drawGripper(Canvas c, Vector2d t) {
+        final double GRIPPER_RADIUS = 3;
+
+        c.setStrokeWidth(1);
+        c.strokeCircle(t.x, t.y, GRIPPER_RADIUS);
+
+    }
+    public static void drawSample(Canvas c, Vector2d t) {
+        final double SAMPLE_RADIUS = 2;
+
+        c.setStrokeWidth(1);
+        c.strokeCircle(t.x, t.y, SAMPLE_RADIUS);
+    }
 }

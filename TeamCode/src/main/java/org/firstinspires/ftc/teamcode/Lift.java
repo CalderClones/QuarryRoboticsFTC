@@ -21,11 +21,11 @@ public class Lift {
     public DcMotorEx liftMotor;
     public LinkedHashMap<String, Integer> presets = new LinkedHashMap<String, Integer>();
     public String liftTargetPreset = "Floor";
-    private TouchSensor limitSwitch;
-    private double offset_from_floor;
+    private final TouchSensor limitSwitch;
+    private final double offset_from_floor;
     private double target_height;
-    private double current_height;
-    private double tolerance;
+    private final double current_height;
+    private final double tolerance;
 
     public Lift(HardwareMap hardwareMap) {
         //these presets need to be tuned empirically
@@ -252,7 +252,7 @@ public class Lift {
 
     public class LiftTo implements Action {
         private boolean initialized = false;
-        private String preset;
+        private final String preset;
 
         public LiftTo(String preset) {
             this.preset = preset;

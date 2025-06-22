@@ -35,8 +35,8 @@ public class SamplePipeline extends OpenCvPipeline {
     private final OpenCvWebcam webcam;
     public Vector2d sampleLocation;
     //TODO: Tune this value
-    Vector2d robotToCamera =  new Vector2d(-9.37 / 25.4, 488.84 / 25.4);
-    Vector2d robotToGripper =  new Vector2d(-14.75 / 25.4, 411.71 / 25.4);
+    public Vector2d robotToCamera =  new Vector2d(-9.37 / 25.4, 488.84 / 25.4);
+    public Vector2d robotToGripper =  new Vector2d(-14.75 / 25.4, 411.71 / 25.4);
     Vector2d cameraToGripper = robotToCamera.minus(robotToGripper);
     Vector2d cameraToSample = new Vector2d(0,0);
     double PIXELS_PER_INCH = 320.0 / (212 / 25.4);
@@ -127,7 +127,7 @@ public class SamplePipeline extends OpenCvPipeline {
             if(alliance == "Red" || alliance == "Both") {
                 Imgproc.findContours(maskRed, allianceContours, redHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             }
-            else if(alliance == "Blue"|| alliance == "Both")
+            if(alliance == "Blue"|| alliance == "Both")
             {
                 Imgproc.findContours(maskBlue, allianceContours, blueHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             }

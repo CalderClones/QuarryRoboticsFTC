@@ -24,23 +24,23 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 
 public class CameraCentre implements Entity {
-    private Vector2d robotToCamera =  new Vector2d(-9.37 / 25.4, 488.84 / 25.4);
-    private String tag = "CAMERA_CENTRE";
+    private final Vector2d robotToCamera =  new Vector2d(-9.37 / 25.4, 488.84 / 25.4);
+    private final String tag = "CAMERA_CENTRE";
 
     private int zIndex = 10;
 
-    private MeepMeep meepMeep;
+    private final MeepMeep meepMeep;
 
     private double canvasWidth = FieldUtil.getCANVAS_WIDTH();
     private double canvasHeight = FieldUtil.getCANVAS_WIDTH();
 
-    private double radius = 1;
-    private double thickness = 1;
+    private final double radius = 1;
+    private final double thickness = 1;
 
     private Vector2d position;
-    private Vector2d velocity;
+    private final Vector2d velocity;
 
-    private RoadRunnerBotEntity bot;
+    private final RoadRunnerBotEntity bot;
 
     public CameraCentre(MeepMeep meepMeep, RoadRunnerBotEntity bot, Vector2d intialPosition, Vector2d initialVelocity) {
         this.meepMeep = meepMeep;

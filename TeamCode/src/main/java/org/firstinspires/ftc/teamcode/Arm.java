@@ -11,13 +11,15 @@ import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
+import java.util.Objects;
+
 public class Arm {
     public DcMotorEx armMotor;
-    private TouchSensor limitSwitch;
-    private DistanceSensor distanceSensor;
+    private final TouchSensor limitSwitch;
+    private final DistanceSensor distanceSensor;
 
     private double targetAngle = 0;
-    private double SPEED = 30;
+    private final double SPEED = 30;
 
 
     //raw motor has 28 ticks per rotation
@@ -72,12 +74,12 @@ public class Arm {
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             if (!initialized) {
-                if (position == "Horizontal") {
+                if (Objects.equals(position, "Horizontal")) {
                     setTargetAngle(90);
-                } else if (position == "Vertical") {
+                } else if (Objects.equals(position, "Vertical")) {
                     setTargetAngle(0);
                 }
-               else if (position == "Basket") {
+               else if (Objects.equals(position, "Basket")) {
                   setTargetAngle(45);
                 }
                 initialized = true;

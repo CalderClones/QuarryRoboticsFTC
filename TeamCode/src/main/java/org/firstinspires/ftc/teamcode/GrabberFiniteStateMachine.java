@@ -69,14 +69,14 @@ public class GrabberFiniteStateMachine {
         SAMPLE_COLLECTED,
         DRIVING
 
-    };
+    }
 
-    private QuarryRoboticsTeleOpWithCamera opMode;
-    private MecanumDrive drive;
-    private Lift lift;
-    private Arm arm;
-    private Wrist wrist;
-    private Gripper gripper;
+    private final QuarryRoboticsTeleOpWithCamera opMode;
+    private final MecanumDrive drive;
+    private final Lift lift;
+    private final Arm arm;
+    private final Wrist wrist;
+    private final Gripper gripper;
     private TrajectoryActionBuilder trajectoryToSample;
     private TrajectoryActionBuilder returnTrajectoryFromSample;
 
@@ -85,7 +85,7 @@ public class GrabberFiniteStateMachine {
     private Vector2d sampleOffset;
     private String sampleColour;
     private GrabberState grabberState;
-    private SamplePipeline samplePipeline;
+    private final SamplePipeline samplePipeline;
 
 
 
@@ -143,6 +143,7 @@ public class GrabberFiniteStateMachine {
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    opMode.unlockDriver();
                     samplePipeline.stopScanning();
                 }
 
@@ -182,6 +183,7 @@ public class GrabberFiniteStateMachine {
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    opMode.unlockDriver();
                     samplePipeline.stopScanning();
                 }
 
@@ -193,6 +195,8 @@ public class GrabberFiniteStateMachine {
                     opMode.telemetry.addLine("Grab pressed - moving to sample");
                     current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
 
+                    //Lock the driver out so they don't mess up the grab
+                    opMode.lockDriverOut();
 
                     Pose2d currentPose = drive.localizer.getPose(); //field centric pose
                     Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
@@ -234,6 +238,7 @@ public class GrabberFiniteStateMachine {
                     current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    opMode.unlockDriver();
                     samplePipeline.stopScanning();
                 }
                 if (!samplePipeline.isSampleDetected()) {
@@ -258,6 +263,7 @@ public class GrabberFiniteStateMachine {
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    opMode.unlockDriver();
                     samplePipeline.stopScanning();
                 }
 
@@ -280,7 +286,9 @@ public class GrabberFiniteStateMachine {
                 }
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
+                    opMode.unlockDriver();
                     setGrabberState(GrabberState.DRIVING);
+                    samplePipeline.stopScanning();
                 }
 
                 break;
@@ -290,11 +298,13 @@ public class GrabberFiniteStateMachine {
                 if (opMode.getRunningActions().isEmpty()) {
                     opMode.telemetry.addLine("Sample collected - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    opMode.unlockDriver();
                     samplePipeline.stopScanning();
                 }
                 if (current.b && !previous.b) {
                     opMode.telemetry.addLine("Cancel pressed - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
+                    opMode.unlockDriver();
                     samplePipeline.stopScanning();
                 }
 

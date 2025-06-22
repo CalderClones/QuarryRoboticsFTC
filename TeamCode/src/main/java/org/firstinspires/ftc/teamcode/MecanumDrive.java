@@ -126,10 +126,10 @@ public final class MecanumDrive {
     private final DownsampledWriter driveCommandWriter = new DownsampledWriter("DRIVE_COMMAND", 50_000_000);
     private final DownsampledWriter mecanumCommandWriter = new DownsampledWriter("MECANUM_COMMAND", 50_000_000);
 
-    private InterpLUT BLScale = new InterpLUT();
-    private InterpLUT BRScale = new InterpLUT();
-    private InterpLUT FLScale = new InterpLUT();
-    private InterpLUT FRScale = new InterpLUT();
+    private final InterpLUT BLScale = new InterpLUT();
+    private final InterpLUT BRScale = new InterpLUT();
+    private final InterpLUT FLScale = new InterpLUT();
+    private final InterpLUT FRScale = new InterpLUT();
     public class DriveLocalizer implements Localizer {
         public final Encoder leftFront, leftBack, rightBack, rightFront;
         public final IMU imu;

@@ -25,22 +25,22 @@ import java.awt.Graphics2D;
 
 public class GripperCentre implements Entity {
     Vector2d robotToGripper =  new Vector2d(-14.75 / 25.4, 411.71 / 25.4);
-    private String tag = "GRIPPER_CENTRE";
+    private final String tag = "GRIPPER_CENTRE";
 
     private int zIndex = 10;
 
-    private MeepMeep meepMeep;
+    private final MeepMeep meepMeep;
 
     private double canvasWidth = FieldUtil.getCANVAS_WIDTH();
     private double canvasHeight = FieldUtil.getCANVAS_WIDTH();
 
-    private double radius = 1;
-    private double thickness = 1;
+    private final double radius = 1;
+    private final double thickness = 1;
 
     private Vector2d position;
-    private Vector2d velocity;
+    private final Vector2d velocity;
 
-    private RoadRunnerBotEntity bot;
+    private final RoadRunnerBotEntity bot;
 
     public GripperCentre(MeepMeep meepMeep, RoadRunnerBotEntity bot, Vector2d intialPosition, Vector2d initialVelocity) {
         this.meepMeep = meepMeep;

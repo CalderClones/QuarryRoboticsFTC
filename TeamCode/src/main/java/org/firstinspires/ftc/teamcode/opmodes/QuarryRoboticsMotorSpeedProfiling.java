@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -22,18 +23,19 @@ import org.firstinspires.ftc.teamcode.MecanumDrive;
  * encoder localizer heading may be significantly off if the track width has not been tuned).
  */
 @Config
+@Disabled
 @TeleOp(group = "drive")
 public class QuarryRoboticsMotorSpeedProfiling extends LinearOpMode {
 
     public static int speed = 10;
 
 
-    private String alliance = "BOTH";
+    private final String alliance = "BOTH";
 
-    private Gamepad currentGamepad1 = new Gamepad();
-    private Gamepad currentGamepad2 = new Gamepad();
-    private Gamepad previousGamepad1 = new Gamepad();
-    private Gamepad previousGamepad2 = new Gamepad();
+    private final Gamepad currentGamepad1 = new Gamepad();
+    private final Gamepad currentGamepad2 = new Gamepad();
+    private final Gamepad previousGamepad1 = new Gamepad();
+    private final Gamepad previousGamepad2 = new Gamepad();
 
     @Override
     public void runOpMode() throws InterruptedException {

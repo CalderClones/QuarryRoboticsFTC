@@ -19,6 +19,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Arm;
+import org.firstinspires.ftc.teamcode.DataStore;
 import org.firstinspires.ftc.teamcode.GrabberFiniteStateMachine;
 import org.firstinspires.ftc.teamcode.Gripper;
 import org.firstinspires.ftc.teamcode.Lift;
@@ -109,9 +110,13 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
         lift = new Lift(hardwareMap);
+        DataStore.lift = lift;
         arm = new Arm(hardwareMap);
+        DataStore.arm = arm;
         wrist = new Wrist(hardwareMap);
+        DataStore.wrist = wrist;
         gripper = new Gripper(hardwareMap);
+        DataStore.gripper = gripper;
 
         Action driveToChamber = drive.actionBuilder(initialPose)
                 .splineToSplineHeading((chamber), NORTH)
@@ -216,33 +221,53 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .addStep(1, 0, 0, 0)
                 .build();
 
+        telemetry.addLine("Resetting lift");
+        telemetry.update();
+        lift.reset();
+        telemetry.addLine("Lift has been reset");
+        telemetry.update();
+
+        telemetry.addLine("Resetting arm");
+        telemetry.update();
+        arm.reset();
+        telemetry.addLine("Arm has been reset");
+        telemetry.update();
+
+
+
         gamepad1.setLedColor(1, 1, 1, LED_DURATION_CONTINUOUS);
         telemetry.addLine("What team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
         telemetry.addLine("What starting position?. LEFT for left, RIGHT for right");
+        telemetry.update();
+
         while (!isStarted() && !isStopRequested()) {
             if (gamepad1.cross) {
                 alliance = "Blue";
                 gamepad1.setLedColor(0, 0, 1, LED_DURATION_CONTINUOUS);
                 gamepad1.runRumbleEffect(rumbleEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
             if (gamepad1.circle) {
                 alliance = "Red";
                 gamepad1.setLedColor(1, 0, 0, LED_DURATION_CONTINUOUS);
                 gamepad1.runRumbleEffect(rumbleEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
             if (gamepad1.dpad_left) {
                 start_pos = "Left";
                 gamepad1.runRumbleEffect(leftEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
             if (gamepad1.dpad_right) {
                 start_pos = "Right";
                 gamepad1.runRumbleEffect(rightEffect);
                 telemetry.addLine(alliance + " Alliance, " + start_pos + " start.");
+                telemetry.update();
             }
-            telemetry.update();
+
             sleep(50);
         }
 
