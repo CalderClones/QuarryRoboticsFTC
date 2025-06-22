@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import static org.opencv.core.Core.inRange;
 import static org.opencv.imgproc.Imgproc.COLOR_RGB2HSV;
 
+import static java.lang.Math.toRadians;
+
 import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -33,7 +35,10 @@ public class SamplePipeline extends OpenCvPipeline {
     private final OpenCvWebcam webcam;
     public Vector2d sampleLocation;
     //TODO: Tune this value
-    Vector2d cameraToGripper = new Vector2d(-5.38 / 25.40, -77.1 / 25.4);
+    Vector2d robotToCamera =  new Vector2d(-9.37 / 25.4, 488.84 / 25.4);
+    Vector2d robotToGripper =  new Vector2d(-14.75 / 25.4, 411.71 / 25.4);
+    Vector2d cameraToGripper = robotToCamera.minus(robotToGripper);
+    Vector2d cameraToSample = new Vector2d(0,0);
     double PIXELS_PER_INCH = 320.0 / (212 / 25.4);
     boolean viewportPaused;
     Scalar green = new Scalar(255, 255, 0);
@@ -262,10 +267,11 @@ public class SamplePipeline extends OpenCvPipeline {
                 int centrey = (int) (moments.get_m01() / moments.get_m00());
 
 
-                double sampleCentreXInches = (centrex - 120) / PIXELS_PER_INCH;
-                double sampleCentreYInches = (160 - centrey) / PIXELS_PER_INCH;
+                double sampleCentreXInches = (centrex - 120) * PIXELS_PER_INCH;
+                double sampleCentreYInches = (160 - centrey) * PIXELS_PER_INCH;
 
-                sampleLocation = cameraToGripper.plus(new Vector2d(-sampleCentreXInches, -sampleCentreYInches));
+                cameraToSample = new Vector2d(sampleCentreXInches,sampleCentreYInches);
+                sampleLocation = cameraToGripper.plus(cameraToSample);
 
                 Imgproc.circle(input, new Point(centrex, centrey), 7, new Scalar(255, 0, 255), -1);
             } else {

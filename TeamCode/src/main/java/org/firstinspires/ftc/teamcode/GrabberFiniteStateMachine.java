@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static java.lang.Math.toRadians;
+
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
@@ -11,6 +13,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.hardware.Gamepad;
+
+import org.firstinspires.ftc.teamcode.opmodes.QuarryRoboticsTeleOpWithCamera;
 
 import java.util.Objects;
 
@@ -67,7 +71,7 @@ public class GrabberFiniteStateMachine {
 
     };
 
-    private LinearOpMode opMode;
+    private QuarryRoboticsTeleOpWithCamera opMode;
     private MecanumDrive drive;
     private Lift lift;
     private Arm arm;
@@ -85,7 +89,7 @@ public class GrabberFiniteStateMachine {
 
 
 
-    public GrabberFiniteStateMachine(LinearOpMode opMode, SamplePipeline samplePipeline, MecanumDrive drive, Lift lift, Arm arm, Wrist wrist, Gripper gripper) {
+    public GrabberFiniteStateMachine(QuarryRoboticsTeleOpWithCamera opMode, SamplePipeline samplePipeline, MecanumDrive drive, Lift lift, Arm arm, Wrist wrist, Gripper gripper) {
         this.opMode = opMode;
         this.drive = drive;
         this.lift = lift;
@@ -105,10 +109,32 @@ public class GrabberFiniteStateMachine {
 
     public void update(Gamepad previous, Gamepad current) {
         switch (getGrabberState()) {
+            case DRIVING:
+                //we're driving around. No automation until scan button is pressed
+                if (current.y && !previous.y) {
+                    opMode.telemetry.addLine("Scan pressed - moving grabber to scanning position");
+                    opMode.telemetry.update();
+                    opMode.addRunningAction(
+                            new SequentialAction(
+                                    new ParallelAction(
+                                            lift.liftToScanning(),
+                                            arm.armToHorizontal(),
+                                            wrist.wristToHome()
+                                    ),
+                                    new ParallelAction(
+                                            gripper.gripperToOpen()
+                                    )));
+
+                    opMode.telemetry.update();
+
+                    setGrabberState(GrabberState.SCANNING_REQUESTED);
+                }
+                break;
+
             case SCANNING_REQUESTED:
                 //scanning has been requested - is the robot ready?
-                if (true){//lift.stationary() && arm.stationary() && wrist.stationary() && gripper.stationary()) {
-                    opMode.telemetry.addLine("Robot is stationary - switching state to SCANNING");
+                if (opMode.getRunningActions().isEmpty()){//lift.stationary() && arm.stationary() && wrist.stationary() && gripper.stationary()) {
+                    opMode.telemetry.addLine("Lift/Arm/Wrist/grabber scanning moves complete - switching state to SCANNING");
                     opMode.telemetry.update();
                     samplePipeline.startScanning();
                     setGrabberState(GrabberState.SCANNING);
@@ -167,33 +193,32 @@ public class GrabberFiniteStateMachine {
                     opMode.telemetry.addLine("Grab pressed - moving to sample");
                     current.setLedColor(0,0,0,Gamepad.LED_DURATION_CONTINUOUS);
 
-                    Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
-                    Pose2d currentPose = drive.localizer.getPose();
-                    Vector2d samplePosition = new Vector2d(currentPose.position.x + getSampleOffset().x, currentPose.position.y + getSampleOffset().y);
+                    Pose2d currentPose = drive.localizer.getPose(); //field centric pose
+                    Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
+                    Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(samplePipeline.sampleLocation); //field centrric sample vector
 
+                    Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
-                    Vector2d fieldSamplePosition = Rotation2d.exp(currentPose.heading.toDouble()).times(samplePosition);
-                    Pose2d samplePose = new Pose2d(fieldSamplePosition, currentPose.heading);
                     Vector2d returnPosition = new Vector2d(currentPose.position.x, currentPose.position.y);
 
-                    opMode.telemetry.addData("Current Pose", currentPose.position);
-                    opMode.telemetry.addData("Sample Pose", samplePose.position);
-                    opMode.telemetry.addData("Field Sample Pose", fieldSamplePosition);
-                    opMode.telemetry.addData("Return Vector", returnPosition);
+                    opMode.telemetry.addData("Current Position", currentPose.position);
+                    opMode.telemetry.addData("Sample Vector", sampleVector);
+                    opMode.telemetry.addData("Rotated Sample Vector", rotatedSampleVector);
+                    opMode.telemetry.addData("Field Sample Position", fieldSamplePosition);
+                    opMode.telemetry.addData("Return Position", returnPosition);
 
                     trajectoryToSample = drive.actionBuilder(currentPose)
-                            .strafeTo(samplePosition);
+                            .strafeTo(fieldSamplePosition);
 
-                    returnTrajectoryFromSample = drive.actionBuilder(samplePose)
+                    returnTrajectoryFromSample = drive.actionBuilder(new Pose2d(fieldSamplePosition, currentPose.heading))
                             .strafeTo(returnPosition);
 
                     Action driveToSample = trajectoryToSample.build();
 
                     opMode.telemetry.addData("Wrist Target Angle", -samplePipeline.getSampleAngle());
 
-
-                    Actions.runBlocking(
+                    opMode.addRunningAction(
                             new SequentialAction(
                                 new ParallelAction(
                                         driveToSample,
@@ -221,11 +246,11 @@ public class GrabberFiniteStateMachine {
 
             case MOVING_ROBOT_TO_SAMPLE:
                 //we're moving to the sample - have we reached it? Lets assume we only entered this state if the action completed.
-                if (true) {
+                if (opMode.getRunningActions().isEmpty()) {
                     opMode.telemetry.addData("Actual Wrist Angle", wrist.getCurrentAngle());
                     opMode.telemetry.addLine("Lift in position - picking up sample");
 
-                    Actions.runBlocking(
+                    opMode.addRunningAction(
                             gripper.gripperToClosed()
                     );
                     setGrabberState(GrabberState.GRABBING_SAMPLE);
@@ -240,11 +265,11 @@ public class GrabberFiniteStateMachine {
 
             case GRABBING_SAMPLE:
                 //servos are moving to grasp sample - has the gripper finished closing?
-                if (true) {
+                if (opMode.getRunningActions().isEmpty()) {
                     opMode.telemetry.addLine("Gripper closed - returning to original position");
 
                     Action returnFromSample = returnTrajectoryFromSample.build();
-                    Actions.runBlocking(
+                    opMode.addRunningAction(
                             new ParallelAction(
                                     returnFromSample,
                                     lift.liftToScanning(),
@@ -262,7 +287,7 @@ public class GrabberFiniteStateMachine {
 
             case SAMPLE_COLLECTED:
                 //robot is returning to its initial condition - is it their yet?
-                if (lift.stationary() && wrist.stationary()) {
+                if (opMode.getRunningActions().isEmpty()) {
                     opMode.telemetry.addLine("Sample collected - switching state to DRIVING");
                     setGrabberState(GrabberState.DRIVING);
                     samplePipeline.stopScanning();
@@ -275,27 +300,7 @@ public class GrabberFiniteStateMachine {
 
                 break;
 
-            case DRIVING:
-                //we're driving around. No automation until scan button is pressed
-                if (current.y && !previous.y) {
-                    opMode.telemetry.addLine("Scan pressed - moving lift to scanning position");
-                    opMode.telemetry.update();
-                    Actions.runBlocking(
-                            new SequentialAction(
-                            new ParallelAction(
-                                    lift.liftToScanning(),
-                                    arm.armToHorizontal(),
-                                    wrist.wristToHome()
-                    ),
-                    new ParallelAction(
-                                    gripper.gripperToOpen()
-                    )));
-                    opMode.telemetry.addLine("Gripper is in the correct position.");
-                    opMode.telemetry.update();
 
-                    setGrabberState(GrabberState.SCANNING_REQUESTED);
-                }
-                break;
         }
     }
 }

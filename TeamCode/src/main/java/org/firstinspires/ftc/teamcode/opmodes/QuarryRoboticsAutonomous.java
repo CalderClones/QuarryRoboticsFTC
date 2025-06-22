@@ -2,10 +2,13 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import static com.qualcomm.robotcore.hardware.Gamepad.LED_DURATION_CONTINUOUS;
 
+import static java.lang.Math.toRadians;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
@@ -53,14 +56,14 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         double BASKET = Math.toRadians(225);
 
         Pose2d initialPose = new Pose2d(-9, -63, NORTH);
-        Pose2d chamber = new Pose2d(-10, -36, NORTH);
+        Pose2d chamber = new Pose2d(-10, -33, NORTH);
         Pose2d chamberScore = new Pose2d(-10, -33, NORTH);
-        Pose2d sample1 = new Pose2d(-47, -40, NORTH);
-        Pose2d sample2 = new Pose2d(-58, -40, NORTH);
-        Pose2d sample3 = new Pose2d(-58, -26, WEST);
-        Pose2d basket1 = new Pose2d(-56, -56, BASKET);
-        Pose2d basket2 = new Pose2d(-56, -56, BASKET);
-        Pose2d basket3 = new Pose2d(-56, -56, BASKET);
+        Pose2d sample1 = new Pose2d(-47.5, -45, NORTH);
+        Pose2d sample2 = new Pose2d(-57.5, -42, NORTH);
+        Pose2d sample3 = new Pose2d(-52, -25, WEST);
+        Pose2d basket1 = new Pose2d(-53, -53, BASKET);
+        Pose2d basket2 = new Pose2d(-53, -53, BASKET);
+        Pose2d basket3 = new Pose2d(-53, -53, BASKET);
         Pose2d park = new Pose2d(-24, -12, EAST);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
@@ -109,7 +112,6 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         arm = new Arm(hardwareMap);
         wrist = new Wrist(hardwareMap);
         gripper = new Gripper(hardwareMap);
-        stateMachine = new GrabberFiniteStateMachine(this, samplePipeline, drive, lift, arm, wrist, gripper);
 
         Action driveToChamber = drive.actionBuilder(initialPose)
                 .splineToSplineHeading((chamber), NORTH)
@@ -285,12 +287,15 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             //the next line will reset sampleDetected to false, but that's ok as we already know we found one
             samplePipeline.stopScanning();
 
-            //build a vector allowing the centre of the gripper to move to the centre of the detected sample
-            Vector2d sampleLocation = drive.localizer.getPose().position.plus(samplePipeline.sampleLocation);
+            Pose2d currentPose = drive.localizer.getPose(); //field centric pose
+            Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
+            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centrric sample vector
+
+            Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
             //make an action to strafe to the sample
             Action driveToSample = drive.actionBuilder(drive.localizer.getPose())
-                    .strafeTo(sampleLocation)
+                    .strafeTo(fieldSamplePosition)
                     .build();
 
             //grab it, score it, go to sample 2
@@ -346,12 +351,15 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             //the next line will reset sampleDetected to false, but that's ok as we already know we found one
             samplePipeline.stopScanning();
 
-            //build a vector allowing the centre of the gripper to move to the centre of the detected sample
-            Vector2d sampleLocation = drive.localizer.getPose().position.plus(samplePipeline.sampleLocation);
+            Pose2d currentPose = drive.localizer.getPose(); //field centric pose
+            Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
+            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centrric sample vector
+
+            Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
             //make an action to strafe to the sample
             Action driveToSample = drive.actionBuilder(drive.localizer.getPose())
-                    .strafeTo(sampleLocation)
+                    .strafeTo(fieldSamplePosition)
                     .build();
 
             //grab it, score it, go to sample 3
@@ -408,12 +416,15 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             //the next line will reset sampleDetected to false, but that's ok as we already know we found one
             samplePipeline.stopScanning();
 
-            //build a vector allowing the centre of the gripper to move to the centre of the detected sample
-            Vector2d sampleLocation = drive.localizer.getPose().position.plus(samplePipeline.sampleLocation);
+            Pose2d currentPose = drive.localizer.getPose(); //field centric pose
+            Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
+            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centrric sample vector
+
+            Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
             //make an action to strafe to the sample
             Action driveToSample = drive.actionBuilder(drive.localizer.getPose())
-                    .strafeTo(sampleLocation)
+                    .strafeTo(fieldSamplePosition)
                     .build();
 
             //grab it, score it, go to park

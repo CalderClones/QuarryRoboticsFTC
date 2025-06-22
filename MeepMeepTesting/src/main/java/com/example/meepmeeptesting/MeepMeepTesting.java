@@ -1,6 +1,9 @@
 package com.example.meepmeeptesting;
 
+import static java.lang.Math.toRadians;
+
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.noahbres.meepmeep.MeepMeep;
 import com.noahbres.meepmeep.roadrunner.DefaultBotBuilder;
@@ -17,12 +20,27 @@ public class MeepMeepTesting {
                 .setDimensions(18,18)
                 .build();
 
+        RoadRunnerBotEntity myBot2 = new DefaultBotBuilder(meepMeep)
+                // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
+                .setConstraints(45, 45, Math.toRadians(180), Math.toRadians(180), 13.28)
+                .setDimensions(18,18)
+                .build();
+
+        CameraCentre cameraCentre = new CameraCentre(meepMeep, myBot2, new Vector2d(0,0), new Vector2d(0,0));
+        GripperCentre gripperCentre = new GripperCentre(meepMeep, myBot2, new Vector2d(0,0), new Vector2d(0,0));
+
+        Vector2d robotToCamera =  new Vector2d(-9.37 / 25.4, 488.84 / 25.4);
+        Vector2d robotToGripper =  new Vector2d(-14.75 / 25.4, 411.71 / 25.4);
+        Vector2d cameraToGripper = robotToCamera.minus(robotToGripper);
+        System.out.println(cameraToGripper);
+
         double NORTH = Math.toRadians(90);
         double EAST = Math.toRadians(0);
         double SOUTH = Math.toRadians(270);
         double WEST = Math.toRadians(180);
         double BASKET = Math.toRadians(225);
 
+        Pose2d sample1Pose = new Pose2d(-47.5,-45, WEST);
 
         myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(-9, -63, NORTH))
                 //drive to chamber
@@ -43,16 +61,13 @@ public class MeepMeepTesting {
                 .setReversed(true)
                 //.strafeTo(new Vector2d(-47,-40))
                 //.splineToConstantHeading(new Vector2d(-47,-40), WEST)
-                .splineToLinearHeading(new Pose2d(-47,-40, NORTH), WEST)
-                // pause to simulate scanning and moving to sample
-                .waitSeconds(0.5)
-                // pause to simulate gripper closing
+                .splineToLinearHeading(new Pose2d(-47.5,-45, NORTH), WEST)
+                // pause to simulate scanning
                 .waitSeconds(0.1)
-                // pause to simulate arm to vertical
-                .waitSeconds(1)
+
                 //drive to baskets
                 .setReversed(true)
-                .splineToSplineHeading(new Pose2d(-56,-56, BASKET),SOUTH)
+                .splineToSplineHeading(new Pose2d(-53,-53, BASKET),SOUTH)
                 // pause to simulate lift to high basket
                 .waitSeconds(1)
                 // pause to simulate arm to scoring pos
@@ -64,7 +79,7 @@ public class MeepMeepTesting {
 
                 //drive to second sample
                 .setReversed(true)
-                .splineToSplineHeading(new Pose2d(-58,-40, NORTH), NORTH)
+                .splineToSplineHeading(new Pose2d(-57.5,-42, NORTH), NORTH)
                 // pause to simulate scanning and moving to sample
                 .waitSeconds(0.5)
                 // pause to simulate gripper closing
@@ -73,7 +88,7 @@ public class MeepMeepTesting {
                 .waitSeconds(1)
                 //drive to baskets
                 .setReversed(true)
-                .splineToSplineHeading(new Pose2d(-56,-56, BASKET),SOUTH)
+                .splineToSplineHeading(new Pose2d(-53,-53, BASKET),SOUTH)
                 // pause to simulate lift to high basket
                 .waitSeconds(1)
                 // pause to simulate arm to scoring pos
@@ -85,7 +100,7 @@ public class MeepMeepTesting {
 
                 //drive to third sample
                 .setReversed(true)
-                .splineToSplineHeading(new Pose2d(-58,-26, WEST), NORTH)
+                .splineToSplineHeading(new Pose2d(-52,-25, WEST), NORTH)
                 // pause to simulate scanning and moving to sample
                 .waitSeconds(0.5)
                 // pause to simulate gripper closing
@@ -94,7 +109,7 @@ public class MeepMeepTesting {
                 .waitSeconds(1)
                 //drive to baskets
                 .setReversed(true)
-                .splineToSplineHeading(new Pose2d(-56,-56, BASKET),SOUTH)
+                .splineToSplineHeading(new Pose2d(-53,-53, BASKET),SOUTH)
                 // pause to simulate lift to high basket
                 .waitSeconds(1)
                 // pause to simulate arm to scoring pos
@@ -113,10 +128,26 @@ public class MeepMeepTesting {
 
                 .build());
 
+        Vector2d samplePosition = sample1Pose.position.plus(Rotation2d.exp(sample1Pose.heading.toDouble()-toRadians(90)).times(cameraToGripper));
+        Vector2d returnPosition = sample1Pose.position;
+
+        myBot2.runAction(myBot.getDrive().actionBuilder(sample1Pose)
+
+                .strafeTo(samplePosition)
+                // pause to simulate gripper closing
+                .waitSeconds(0.1)
+                .strafeTo(returnPosition)
+                // pause to simulate arm to vertical
+                .waitSeconds(1)
+                .build());
+
         meepMeep.setBackground(MeepMeep.Background.FIELD_INTO_THE_DEEP_JUICE_DARK)
                 .setDarkMode(true)
                 .setBackgroundAlpha(0.95f)
                 .addEntity(myBot)
+                .addEntity(myBot2)
+                .addEntity(cameraCentre)
+                .addEntity(gripperCentre)
                 .start();
     }
 }

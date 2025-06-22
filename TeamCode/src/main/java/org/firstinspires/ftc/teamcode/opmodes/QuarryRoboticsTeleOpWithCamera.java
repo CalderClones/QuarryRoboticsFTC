@@ -1,25 +1,18 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import static com.qualcomm.robotcore.hardware.Gamepad.LED_DURATION_CONTINUOUS;
-import static org.opencv.core.Core.inRange;
-import static org.opencv.imgproc.Imgproc.COLOR_RGB2HSV;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
-import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.LED;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Arm;
@@ -31,19 +24,9 @@ import org.firstinspires.ftc.teamcode.MecanumDrive;
 
 import org.firstinspires.ftc.teamcode.SamplePipeline;
 import org.firstinspires.ftc.teamcode.Wrist;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.Point;
-import org.opencv.core.RotatedRect;
-import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.imgproc.Moments;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
-import org.openftc.easyopencv.OpenCvPipeline;
 import org.openftc.easyopencv.OpenCvWebcam;
 
 import java.util.ArrayList;
@@ -78,6 +61,10 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
     private Gripper gripper;
 
     private  GrabberFiniteStateMachine stateMachine;
+    private FtcDashboard dash = FtcDashboard.getInstance();
+    private List<Action> runningActions = new ArrayList<>();
+
+
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -121,7 +108,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             }
         });
 
-        FtcDashboard.getInstance().startCameraStream(webcam, 0);
+        dash.startCameraStream(webcam, 0);
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
         lift = new Lift(hardwareMap);
@@ -244,6 +231,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         samplePipeline.setAlliance(alliance);
         while (!isStopRequested()) {
 
+            TelemetryPacket packet = new TelemetryPacket();
+
             previousGamepad1.copy(currentGamepad1);
             previousGamepad2.copy(currentGamepad2);
             currentGamepad1.copy(gamepad1);
@@ -266,60 +255,51 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                 reverse = !reverse;
             }
 
-            if (currentGamepad2.a && !previousGamepad2.a) { //CROSS button
-                if (Objects.equals(gripper.getPosition(), "Open")) {
-                    gripper.close();
-                } else {
-                    gripper.open();
-                }
-            }
 
-            if (currentGamepad2.dpad_up && !previousGamepad2.dpad_up) {
 
-            }
 
-            if (currentGamepad2.dpad_down && !previousGamepad2.dpad_down) {
-
-            }
-
-            if (currentGamepad2.dpad_left && !previousGamepad2.dpad_left) {
-
-            }
-
-            if (currentGamepad2.dpad_right && !previousGamepad2.dpad_right) {
-
-            }
-
-            if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
-                wrist.setTargetAngle(0);
-            } else if (currentGamepad2.left_trigger >= 0.1)
-                wrist.setTargetAngle(-90 * currentGamepad2.left_trigger);
-            else if (currentGamepad2.right_trigger >= 0.1)
-                wrist.setTargetAngle(90 * currentGamepad2.right_trigger);
 
             if(stateMachine.getGrabberState() == GrabberFiniteStateMachine.GrabberState.DRIVING)
             {
                 arm.moveArm(-gamepad2.right_stick_y);
+                lift.moveLift(gamepad1.left_stick_y);
+
+                if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
+                    wrist.setTargetAngle(0);
+                } else if (currentGamepad2.left_trigger >= 0.1)
+                    wrist.setTargetAngle(-90 * currentGamepad2.left_trigger);
+                else if (currentGamepad2.right_trigger >= 0.1)
+                    wrist.setTargetAngle(90 * currentGamepad2.right_trigger);
+
+                if (currentGamepad2.dpad_up && !previousGamepad2.dpad_up) {
+                    lift.nextPresetPosition();
+                    telemetry.addData("liftPreset", lift.liftTargetPreset);
+                }
+                if (currentGamepad2.dpad_down && !previousGamepad2.dpad_down) {
+                    lift.previousPresetPosition();
+                    telemetry.addData("liftPreset", lift.liftTargetPreset);
+                }
+                if (currentGamepad2.dpad_left && !previousGamepad2.dpad_left) {
+                    //lift.setTargetHeight(0);
+                }
+                if (currentGamepad2.dpad_right && !previousGamepad2.dpad_right) {
+                    //lift.setTargetHeight(1000);
+                }
+
+                if (currentGamepad2.a && !previousGamepad2.a) { //CROSS button
+                    if (Objects.equals(gripper.getPosition(), "Open")) {
+                        gripper.close();
+                    } else {
+                        gripper.open();
+                    }
+                }
+
 
                 //arm.setTargetAngle(Range.clip(gamepad2.right_stick_y * 90, 0, 90));
             }
 
-            Rotation2d field_transform = drive.localizer.getPose().heading.inverse();
 
-            if (currentGamepad2.dpad_up && !previousGamepad2.dpad_up) {
-                lift.nextPresetPosition();
-                telemetry.addData("liftPreset", lift.liftTargetPreset);
-            }
-            if (currentGamepad2.dpad_down && !previousGamepad2.dpad_down) {
-                lift.previousPresetPosition();
-                telemetry.addData("liftPreset", lift.liftTargetPreset);
-            }
-            if (currentGamepad2.dpad_left && !previousGamepad2.dpad_left) {
-                lift.set_target_height(0);
-            }
-            if (currentGamepad2.dpad_right && !previousGamepad2.dpad_right) {
-                lift.set_target_height(1000);
-            }
+
             //lift.setPower(-currentGamepad2.left_stick_y);
             //gantry.setPower(currentGamepad2.right_stick_y);
 
@@ -344,30 +324,34 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             }
             drive.updatePoseEstimate();
 
-           // telemetry.addData("LiftTarget", lift.get_target_height());
-            //telemetry.addData("LiftHeight", lift.getCurrentHeight());
+            // update running actions
+            List<Action> newActions = new ArrayList<>();
+            for (Action action : getRunningActions()) {
+                action.preview(packet.fieldOverlay());
+                if (action.run(packet)) {
+                    newActions.add(action);
+                }
+            }
+            setRunningActions(newActions);
 
-
-            //telemetry.addData("LiftTargetTicks", lift.liftMotor.getTargetPosition());
-            //telemetry.addData("LiftHeightTicks", lift.liftMotor.getCurrentPosition());
-
-            //telemetry.addData("x", drive.localizer.getPose().position.x);
-            //telemetry.addData("y", drive.localizer.getPose().position.y);
-            //telemetry.addData("heading (deg)", Math.toDegrees(drive.localizer.getPose().heading.toDouble()));
-
-            TelemetryPacket packet = new TelemetryPacket();
             packet.fieldOverlay().setStroke("#3F51B5");
             Drawing.drawRobot(packet.fieldOverlay(), drive.localizer.getPose());
-            FtcDashboard.getInstance().sendTelemetryPacket(packet);
+            dash.sendTelemetryPacket(packet);
 
-            // Show the elapsed game time and wheel power.
-
-            //telemetry.addData("front_left", drive.leftFront.getCurrentPosition());
-            //telemetry.addData("front_right", drive.rightFront.getCurrentPosition());
-            //telemetry.addData("rear_left", drive.leftBack.getCurrentPosition());
-            //telemetry.addData("rear_right", drive.rightBack.getCurrentPosition());
             telemetry.update();
         }
+    }
+
+    public List<Action> getRunningActions() {
+        return runningActions;
+    }
+
+    public void addRunningAction(Action action){
+        runningActions.add(action);
+    }
+
+    public void setRunningActions(List<Action> runningActions) {
+        this.runningActions = runningActions;
     }
 }
 
