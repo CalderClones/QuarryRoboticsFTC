@@ -266,9 +266,8 @@ public class SamplePipeline extends OpenCvPipeline {
                 int centrex = (int) (moments.get_m10() / moments.get_m00());
                 int centrey = (int) (moments.get_m01() / moments.get_m00());
 
-
-                double sampleCentreXInches = (centrex - 120) * PIXELS_PER_INCH;
-                double sampleCentreYInches = (160 - centrey) * PIXELS_PER_INCH;
+                double sampleCentreXInches = (centrex - 120) / PIXELS_PER_INCH;
+                double sampleCentreYInches = (160 - centrey) / PIXELS_PER_INCH;
 
                 cameraToSample = new Vector2d(sampleCentreXInches,sampleCentreYInches);
                 sampleLocation = cameraToGripper.plus(cameraToSample);

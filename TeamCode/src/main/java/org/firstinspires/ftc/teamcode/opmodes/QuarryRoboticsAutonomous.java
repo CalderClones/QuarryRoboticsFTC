@@ -6,10 +6,12 @@ import static java.lang.Math.toRadians;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -48,6 +50,10 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
+        telemetry.setAutoClear(false);
+        telemetry.setMsTransmissionInterval(50);
+
+
         ElapsedTime timer = new ElapsedTime();
 
         double NORTH = Math.toRadians(90);
@@ -57,7 +63,7 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         double BASKET = Math.toRadians(225);
 
         Pose2d initialPose = new Pose2d(-9, -63, NORTH);
-        Pose2d chamber = new Pose2d(-10, -33, NORTH);
+        Pose2d chamber = new Pose2d(-10, -30, NORTH);
         Pose2d chamberScore = new Pose2d(-10, -33, NORTH);
         Pose2d sample1 = new Pose2d(-47.5, -45, NORTH);
         Pose2d sample2 = new Pose2d(-57.5, -42, NORTH);
@@ -166,13 +172,14 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .splineToLinearHeading((park), EAST)
                 .build();
 
+        /* OTOS appears to be unreliable
         telemetry.addLine("Pausing to allow OTOS to initialise");
         telemetry.update();
         sleep(1000);
         telemetry.addLine("OTOS should be initialised");
         telemetry.update();
         telemetry.clear();
-
+        */
         Gamepad.RumbleEffect rumbleEffect = new Gamepad.RumbleEffect.Builder()
                 .addStep(1.0, 1.0, 200)  //  Rumble right motor 100% for 500 mSec
                 .addStep(0.0, 0.0, 100)  //  Pause for 300 mSec
@@ -278,19 +285,24 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         //Score Specimen
         Actions.runBlocking(
                 new SequentialAction(
-                        driveToChamber,
-
-                        lift.liftToHighChamber(),
+                        new ParallelAction(
+                            new InstantAction(() -> telemetry.addLine("Driving to Chamber and raising lift")),
+                            driveToChamber,
+                            lift.liftToHighChamber()),
+                        new InstantAction(() -> telemetry.addLine("Driving to Chamber Scoring position")),
                         driveToChamberScore,
+                        new InstantAction(() -> telemetry.addLine("Clipping Specimen")),
                         lift.liftToHighChamberClipped(),
+                        new InstantAction(() -> telemetry.addLine("Releasing Specimen")),
                         gripper.gripperToOpen(),
                         new ParallelAction(
                                 lift.liftToScanning(),
-                                wrist.wristToHome()
-                        ),
-                        new ParallelAction(
+                                wrist.wristToHome(),
                                 driveToSample1,
-                                arm.armToHorizontal()
+                                new SequentialAction(
+                                        new SleepAction(1000),
+                                        arm.armToHorizontal()
+                                )
                         )
                 )
         );
@@ -334,18 +346,21 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                             ),
                             gripper.gripperToClosed(),
                             new ParallelAction(
-                                    arm.armToVertical(),
-                                    driveToBasket1
+                                    new SequentialAction(
+                                        arm.armToVertical(),
+                                        new SleepAction(0.5),
+                                        arm.armToBasket()
+                                    ),
+                                    driveToBasket1,
+                                    lift.liftToHighBasket()
                             ),
-                            lift.liftToHighBasket(),
-                            arm.armToBasket(),
                             gripper.gripperToOpen(),
+                            arm.armToVertical(),
                             new ParallelAction(
                                     lift.liftToScanning(),
-                                    arm.armToVertical(),
-                                    wrist.wristToHome()
+                                    wrist.wristToHome(),
+                                    driveToSample2
                             ),
-                            driveToSample2,
                             arm.armToHorizontal()
                     )
             );
@@ -398,18 +413,21 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                             ),
                             gripper.gripperToClosed(),
                             new ParallelAction(
-                                    arm.armToVertical(),
-                                    driveToBasket2
+                                    new SequentialAction(
+                                            arm.armToVertical(),
+                                            new SleepAction(0.5),
+                                            arm.armToBasket()
+                                    ),
+                                    driveToBasket2,
+                                    lift.liftToHighBasket()
                             ),
-                            lift.liftToHighBasket(),
-                            arm.armToBasket(),
                             gripper.gripperToOpen(),
+                            arm.armToVertical(),
                             new ParallelAction(
                                     lift.liftToScanning(),
-                                    arm.armToVertical(),
-                                    wrist.wristToHome()
+                                    wrist.wristToHome(),
+                                    driveToSample3
                             ),
-                            driveToSample3,
                             arm.armToHorizontal()
                     )
             );

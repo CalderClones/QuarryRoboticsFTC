@@ -19,6 +19,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Arm;
 import org.firstinspires.ftc.teamcode.DataStore;
@@ -71,11 +72,15 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
     private List<Action> runningActions = new ArrayList<>();
 
     private boolean driverLockedOut = false;
-
+    private MecanumDrive drive;
 
 
     @Override
     public void runOpMode() throws InterruptedException {
+
+        telemetry.setAutoClear(false);
+        telemetry.setMsTransmissionInterval(50);
+
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam"), cameraMonitorViewId);
@@ -118,8 +123,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
         dash.startCameraStream(webcam, 0);
 
-        MecanumDrive drive = new MecanumDrive(hardwareMap, DataStore.currentPose);
-        if(DataStore.lift != null){
+        drive = new MecanumDrive(hardwareMap, DataStore.currentPose);
+        if(DataStore.lift == null){
             lift = new Lift(hardwareMap);
             telemetry.addLine("Resetting lift");
             telemetry.update();
@@ -131,7 +136,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             lift = DataStore.lift;
         }
 
-        if(DataStore.arm != null){
+        if(DataStore.arm == null){
             arm = new Arm(hardwareMap);
             telemetry.addLine("Resetting arm");
             telemetry.update();
@@ -143,14 +148,14 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             arm = DataStore.arm;
         }
 
-        if (DataStore.wrist != null) {
+        if (DataStore.wrist == null) {
             wrist = new Wrist(hardwareMap);
         }
         else{
             wrist = DataStore.wrist;
         }
 
-        if (DataStore.gripper != null) {
+        if (DataStore.gripper == null) {
             gripper = new Gripper(hardwareMap);
         }
         else{
@@ -159,8 +164,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
         stateMachine = new GrabberFiniteStateMachine(this, samplePipeline, drive, lift, arm, wrist, gripper);
 
-        telemetry.setAutoClear(false);
-        telemetry.setMsTransmissionInterval(50);
+
 
         /*
         telemetry.addLine("Pausing to allow OTOS to initialise");
@@ -171,6 +175,9 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
         telemetry.clear();
          */
 
+        waitForStart();
+
+        stateMachine.setGrabberState(GrabberFiniteStateMachine.GrabberState.DRIVING);
         gamepad2.setLedColor(1,1,1,LED_DURATION_CONTINUOUS);
         unlockDriver();
 
@@ -196,7 +203,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
                 //proportional control for arm
                 arm.moveArm(-gamepad2.right_stick_y);
                 //proportional control for lift
-                lift.moveLift(gamepad1.left_stick_y);
+                lift.moveLift(-gamepad2.left_stick_y);
 
                 //proportional control (albeit weird) for wrist)
                 if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
@@ -273,9 +280,7 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             }
             //if they ARE locked out, ignore all the gamepad controls and stop the drive
             else {
-                Vector2d input = new Vector2d(0,0);
-                drive.setDrivePowers(new PoseVelocity2d(
-                        input,0));
+
             }
 
             //always update the pose estimate
@@ -294,15 +299,20 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
             //code to draw the robot /camera/gripper/sample
             Pose2d currentPose = drive.localizer.getPose(); //field centric pose
-
-            Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
-            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(samplePipeline.sampleLocation); //field centric sample vector
             Vector2d rotatedCameraVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(samplePipeline.robotToCamera); //field centric camera vector
             Vector2d rotatedGripperVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(samplePipeline.robotToGripper); //field centric gripper vector
 
-            Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
             Vector2d fieldCameraPosition = currentPose.position.plus(rotatedCameraVector); //should rotate and add sample position to generate field centric position of the camera
             Vector2d fieldGripperPosition = currentPose.position.plus(rotatedGripperVector); //should rotate and add sample position to generate field centric position of the gripper
+
+
+            if (samplePipeline.isSampleDetected()) {
+                Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
+                Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble() - toRadians(90)).times(samplePipeline.sampleLocation); //field centric sample vector
+                Vector2d fieldSamplePosition = fieldCameraPosition.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
+                packet.fieldOverlay().setStroke("#E09F3E");
+                Drawing.drawSample(packet.fieldOverlay(), fieldSamplePosition);
+            }
 
             packet.fieldOverlay().setStroke("#3F51B5");
             Drawing.drawRobot(packet.fieldOverlay(), currentPose);
@@ -311,12 +321,6 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             packet.fieldOverlay().setStroke("#9E2A2B");
             Drawing.drawGripper(packet.fieldOverlay(), fieldGripperPosition);
 
-
-            if(samplePipeline.isSampleDetected()){
-                packet.fieldOverlay().setStroke("#E09F3E");
-                Drawing.drawSample(packet.fieldOverlay(), fieldSamplePosition);
-
-            }
             dash.sendTelemetryPacket(packet);
 
             telemetry.update();
@@ -345,11 +349,16 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
     public void lockDriverOut() {
         this.driverLockedOut = true;
+        telemetry.addLine("DRIVER locked while robot moves");
         gamepad1.setLedColor(1,0,0,LED_DURATION_CONTINUOUS);
         gamepad1.rumble(200);
+        Vector2d input = new Vector2d(0,0);
+        drive.setDrivePowers(new PoseVelocity2d(
+                input,0));
     }
     public void unlockDriver() {
         this.driverLockedOut = false;
+        telemetry.addLine("DRIVER is in control");
         gamepad1.setLedColor(0,1,0,LED_DURATION_CONTINUOUS);
         gamepad1.rumble(400);
     }
