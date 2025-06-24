@@ -27,6 +27,7 @@ import org.firstinspires.ftc.teamcode.Gripper;
 import org.firstinspires.ftc.teamcode.Lift;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.SamplePipeline;
+import org.firstinspires.ftc.teamcode.TelemetryAction;
 import org.firstinspires.ftc.teamcode.Wrist;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
@@ -286,20 +287,22 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         Actions.runBlocking(
                 new SequentialAction(
                         new ParallelAction(
-                            new InstantAction(() -> telemetry.addLine("Driving to Chamber and raising lift")),
+                            new TelemetryAction(telemetry,"Driving to Chamber and raising lift"),
                             driveToChamber,
                             lift.liftToHighChamber()),
-                        new InstantAction(() -> telemetry.addLine("Driving to Chamber Scoring position")),
+                        new TelemetryAction(telemetry,"Driving to Chamber Scoring position"),
                         driveToChamberScore,
-                        new InstantAction(() -> telemetry.addLine("Clipping Specimen")),
+                        new TelemetryAction(telemetry,"Clipping Specimen"),
                         lift.liftToHighChamberClipped(),
-                        new InstantAction(() -> telemetry.addLine("Releasing Specimen")),
+                new TelemetryAction(telemetry,"Releasing Specimen"),
                         gripper.gripperToOpen(),
                         new ParallelAction(
+                                new TelemetryAction(telemetry,"Heading to sample 1"),
                                 lift.liftToScanning(),
                                 wrist.wristToHome(),
                                 driveToSample1,
                                 new SequentialAction(
+                                        new TelemetryAction(telemetry,"Preparing to scan for sample 1"),
                                         new SleepAction(1000),
                                         arm.armToHorizontal()
                                 )
@@ -340,12 +343,15 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                     new SequentialAction(
 
                             new ParallelAction(
+                                    new TelemetryAction(telemetry,"Moving to sample"),
                                     driveToSample,
                                     lift.liftToGrabbing(),
                                     wrist.wristToAngle(samplePipeline.getSampleAngle())
                             ),
+                            new TelemetryAction(telemetry,"Closing gripper"),
                             gripper.gripperToClosed(),
                             new ParallelAction(
+                                    new TelemetryAction(telemetry, "Heading to basket"),
                                     new SequentialAction(
                                         arm.armToVertical(),
                                         new SleepAction(0.5),
