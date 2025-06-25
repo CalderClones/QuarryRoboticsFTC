@@ -125,6 +125,8 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
 
         drive = new MecanumDrive(hardwareMap, DataStore.currentPose);
         if(DataStore.lift == null){
+            telemetry.addLine("Needed to make a new lift");
+            telemetry.update();
             lift = new Lift(hardwareMap);
             telemetry.addLine("Resetting lift");
             telemetry.update();
@@ -133,10 +135,15 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             telemetry.update();
         }
         else {
+            telemetry.addLine("Reusing existing lift");
+            telemetry.update();
             lift = DataStore.lift;
+            lift.softReset();
         }
 
         if(DataStore.arm == null){
+            telemetry.addLine("Needed to make a new arm");
+            telemetry.update();
             arm = new Arm(hardwareMap);
             telemetry.addLine("Resetting arm");
             telemetry.update();
@@ -145,20 +152,36 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             telemetry.update();
         }
         else{
+            telemetry.addLine("Reusing existing arm");
+            telemetry.update();
             arm = DataStore.arm;
+            arm.softReset();
         }
 
-        if (DataStore.wrist == null) {
+        if(DataStore.wrist == null){
+            telemetry.addLine("Needed to make a new wrist");
+            telemetry.update();
             wrist = new Wrist(hardwareMap);
+            telemetry.addLine("Better hope it was in the home position :-P");
+            telemetry.update();
         }
         else{
+            telemetry.addLine("Reusing existing wrist");
+            telemetry.update();
             wrist = DataStore.wrist;
+            wrist.softReset();
         }
 
-        if (DataStore.gripper == null) {
+        if(DataStore.gripper == null){
+            telemetry.addLine("Needed to make a new gripper");
+            telemetry.update();
             gripper = new Gripper(hardwareMap);
+            telemetry.addLine("It's a servo, so no resset needed");
+            telemetry.update();
         }
         else{
+            telemetry.addLine("Reusing existing gripper");
+            telemetry.update();
             gripper = DataStore.gripper;
         }
 

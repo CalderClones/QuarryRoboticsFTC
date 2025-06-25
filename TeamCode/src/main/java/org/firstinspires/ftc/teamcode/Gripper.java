@@ -9,6 +9,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import java.util.Objects;
+
 public class Gripper {
     //servo positions need to be confirmed empirically
     private static final double GRIPPER_OPEN = 0.0;
@@ -37,21 +39,21 @@ public class Gripper {
 
     public class GripperTo implements Action {
         private final ElapsedTime gripperTimer;
+        private String actionTarget;
         private boolean initialized = false;
 
 
         public GripperTo(String newPosition) {
             gripperTimer = new ElapsedTime();
-            setPosition(newPosition);
+            actionTarget = newPosition;
         }
 
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             if (!initialized) {
-
-                if (getPosition() == "Open") {
+                if (Objects.equals(actionTarget, "Open")) {
                     open();
-                } else if (getPosition() == "Closed") {
+                } else if (Objects.equals(actionTarget, "Closed")) {
                     close();
                 }
                 initialized = true;

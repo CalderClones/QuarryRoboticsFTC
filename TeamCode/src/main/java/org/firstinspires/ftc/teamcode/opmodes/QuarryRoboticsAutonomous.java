@@ -6,7 +6,6 @@ import static java.lang.Math.toRadians;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Rotation2d;
@@ -19,14 +18,15 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.Arm;
 import org.firstinspires.ftc.teamcode.DataStore;
-import org.firstinspires.ftc.teamcode.GrabberFiniteStateMachine;
 import org.firstinspires.ftc.teamcode.Gripper;
 import org.firstinspires.ftc.teamcode.Lift;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.SamplePipeline;
+import org.firstinspires.ftc.teamcode.TelemetryAction;
 import org.firstinspires.ftc.teamcode.Wrist;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
@@ -44,15 +44,11 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
     private Arm arm;
     private Wrist wrist;
     private Gripper gripper;
-
-    private GrabberFiniteStateMachine stateMachine;
-
     @Override
     public void runOpMode() throws InterruptedException {
 
         telemetry.setAutoClear(false);
         telemetry.setMsTransmissionInterval(50);
-
 
         ElapsedTime timer = new ElapsedTime();
 
@@ -63,14 +59,13 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         double BASKET = Math.toRadians(225);
 
         Pose2d initialPose = new Pose2d(-9, -63, NORTH);
-        Pose2d chamber = new Pose2d(-10, -30, NORTH);
-        Pose2d chamberScore = new Pose2d(-10, -33, NORTH);
-        Pose2d sample1 = new Pose2d(-47.5, -45, NORTH);
-        Pose2d sample2 = new Pose2d(-57.5, -42, NORTH);
-        Pose2d sample3 = new Pose2d(-52, -25, WEST);
-        Pose2d basket1 = new Pose2d(-53, -53, BASKET);
-        Pose2d basket2 = new Pose2d(-53, -53, BASKET);
-        Pose2d basket3 = new Pose2d(-53, -53, BASKET);
+        Pose2d chamber = new Pose2d(-10, -33.5, NORTH);
+        Pose2d chamberReverse = new Pose2d(-10, -48, NORTH);
+        Pose2d sample1 = new Pose2d(-59.5, -45, NORTH);
+        Pose2d sample2 = new Pose2d(-69.5, -45, NORTH);
+        Pose2d sample3 = new Pose2d(-58, -25, WEST);
+        Pose2d basket = new Pose2d(-63, -57, BASKET);
+        Pose2d basketReverse = new Pose2d(-57, -51, BASKET);
         Pose2d park = new Pose2d(-24, -12, EAST);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
@@ -128,19 +123,25 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .splineToSplineHeading((chamber), NORTH)
                 .build();
 
-        Action driveToChamberScore = drive.actionBuilder(chamber)
-                .splineToSplineHeading((chamberScore), NORTH)
-                .build();
 
-        Action driveToSample1 = drive.actionBuilder(chamberScore)
+        Action driveToSample1 = drive.actionBuilder(chamber)
+                .setReversed(true)
+                .splineToLinearHeading(chamberReverse, SOUTH)
                 .splineToLinearHeading((sample1), WEST)
                 .build();
 
         Action driveToBasket1 = drive.actionBuilder(sample1)
-                .splineToSplineHeading(basket1, SOUTH)
+                .setReversed(true)
+                .splineToSplineHeading(basket, SOUTH)
                 .build();
 
-        Action driveToSample2 = drive.actionBuilder(basket1)
+        Action driveToBasketReverse = drive.actionBuilder(basket)
+                .setReversed(true)
+                .splineToSplineHeading(basketReverse, NORTH)
+                .build();
+
+        Action driveToSample2 = drive.actionBuilder(basketReverse)
+                .setReversed(true)
                 .splineToLinearHeading((sample2), NORTH)
                 .build();
 
@@ -149,10 +150,12 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .build();
 
         Action driveToBasket2 = drive.actionBuilder(sample2)
-                .splineToSplineHeading(basket2, SOUTH)
+                .setReversed(true)
+                .splineToSplineHeading(basket, SOUTH)
                 .build();
 
-        Action driveToSample3 = drive.actionBuilder(basket2)
+        Action driveToSample3 = drive.actionBuilder(basket)
+                .setReversed(true)
                 .splineToLinearHeading((sample3), NORTH)
                 .build();
 
@@ -161,10 +164,12 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .build();
 
         Action driveToBasket3 = drive.actionBuilder(sample3)
-                .splineToSplineHeading(basket3, SOUTH)
+                .setReversed(true)
+                .splineToSplineHeading(basket, SOUTH)
                 .build();
 
-        Action driveToPark = drive.actionBuilder(basket3)
+        Action driveToPark = drive.actionBuilder(basket)
+                .setReversed(true)
                 .splineToLinearHeading((park), EAST)
                 .build();
 
@@ -203,31 +208,6 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .build();
 
 
-        Gamepad.LedEffect whiteEffect = new Gamepad.LedEffect.Builder()
-                .addStep(1, 1, 1, LED_DURATION_CONTINUOUS)
-                .build();
-        Gamepad.LedEffect yellowEffect = new Gamepad.LedEffect.Builder()
-                .addStep(1, 1, 0, 2500)
-                .build();
-        Gamepad.LedEffect blueEffect = new Gamepad.LedEffect.Builder()
-                .addStep(0, 0, 1, 100)
-                .addStep(0, 0, 0, 100)
-                .addStep(0, 0, 1, 100)
-                .addStep(0, 0, 0, 100)
-                .addStep(0, 0, 1, 100)
-                .addStep(0, 0, 0, 100)
-                .addStep(0, 0, 1, LED_DURATION_CONTINUOUS)
-                .build();
-        Gamepad.LedEffect redEffect = new Gamepad.LedEffect.Builder()
-                .addStep(1, 0, 0, 100)
-                .addStep(0, 0, 0, 100)
-                .addStep(1, 0, 0, 100)
-                .addStep(0, 0, 0, 100)
-                .addStep(1, 0, 0, 100)
-                .addStep(0, 0, 0, 100)
-                .addStep(1, 0, 0, 0)
-                .build();
-
         telemetry.addLine("Resetting lift");
         telemetry.update();
         lift.reset();
@@ -240,11 +220,9 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         telemetry.addLine("Arm has been reset");
         telemetry.update();
 
-
-
         gamepad1.setLedColor(1, 1, 1, LED_DURATION_CONTINUOUS);
         telemetry.addLine("What team are we on? X for Blue Alliance. CIRCLE for Red Alliance");
-        telemetry.addLine("What starting position?. LEFT for left, RIGHT for right");
+        telemetry.addLine("What starting position?. LEFT for left, RIGHT for right (this hasn't been implemented)");
         telemetry.update();
 
         while (!isStarted() && !isStopRequested()) {
@@ -280,27 +258,32 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
 
         waitForStart();
 
+        telemetry.addLine("Beginning Autonomous movement");
+        telemetry.update();
+
         if (isStopRequested()) return;
 
         //Score Specimen
         Actions.runBlocking(
                 new SequentialAction(
                         new ParallelAction(
-                            new InstantAction(() -> telemetry.addLine("Driving to Chamber and raising lift")),
-                            driveToChamber,
-                            lift.liftToHighChamber()),
-                        new InstantAction(() -> telemetry.addLine("Driving to Chamber Scoring position")),
-                        driveToChamberScore,
-                        new InstantAction(() -> telemetry.addLine("Clipping Specimen")),
+                                new TelemetryAction(telemetry, "Driving to Chamber and raising lift"),
+                                driveToChamber,
+                                lift.liftToHighChamber()),
+                        new TelemetryAction(telemetry, "Clipping Specimen"),
                         lift.liftToHighChamberClipped(),
-                        new InstantAction(() -> telemetry.addLine("Releasing Specimen")),
+                        // Commented out as not sure this sleep is needed
+                        // new SleepAction(0.5),
+                        new TelemetryAction(telemetry, "Releasing Specimen"),
                         gripper.gripperToOpen(),
                         new ParallelAction(
+                                new TelemetryAction(telemetry, "Driving to sample 1 and moving lift"),
                                 lift.liftToScanning(),
                                 wrist.wristToHome(),
                                 driveToSample1,
                                 new SequentialAction(
-                                        new SleepAction(1000),
+                                        new SleepAction(1),
+                                        new TelemetryAction(telemetry, "Moving arm to horizontal for scanning"),
                                         arm.armToHorizontal()
                                 )
                         )
@@ -310,23 +293,23 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         //Handle Sample 1
         timer.reset();
         samplePipeline.startScanning();
-
+        telemetry.addLine("Scanning for sample 1");
+        telemetry.update();
         while (!samplePipeline.isSampleDetected() && timer.milliseconds() < 250) {
-            telemetry.addLine("Scanning for sample");
-            telemetry.update();
+
             sleep(50);
         }
 
         if (samplePipeline.isSampleDetected()) {
             //we found a sample - lets grab it and take it to the basket!
-            telemetry.addLine("Sample detected - plotting a course");
+            telemetry.addLine("Sample 1 detected - plotting a course to collect");
             telemetry.update();
             //the next line will reset sampleDetected to false, but that's ok as we already know we found one
             samplePipeline.stopScanning();
 
             Pose2d currentPose = drive.localizer.getPose(); //field centric pose
             Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
-            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centrric sample vector
+            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centric sample vector
 
             Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
@@ -338,24 +321,32 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             //grab it, score it, go to sample 2
             Actions.runBlocking(
                     new SequentialAction(
-
                             new ParallelAction(
+                                    new TelemetryAction(telemetry,"Moving to pick up sample 1"),
                                     driveToSample,
                                     lift.liftToGrabbing(),
                                     wrist.wristToAngle(samplePipeline.getSampleAngle())
                             ),
+                            new TelemetryAction(telemetry,"Cosing Gripper"),
                             gripper.gripperToClosed(),
+                            new TelemetryAction(telemetry, "Sample Collected"),
                             new ParallelAction(
+                                    new TelemetryAction(telemetry, "Driving to basket"),
                                     new SequentialAction(
                                         arm.armToVertical(),
+                                        //this delay means the arm first goes vertical (for driving) then after a short delay goes to 45 degrees to deposit
                                         new SleepAction(0.5),
                                         arm.armToBasket()
                                     ),
                                     driveToBasket1,
                                     lift.liftToHighBasket()
                             ),
+                            new TelemetryAction(telemetry, "Depositing sample 1 in high basket"),
                             gripper.gripperToOpen(),
-                            arm.armToVertical(),
+                            new ParallelAction(
+                                new TelemetryAction(telemetry, "Backing away from basket"),
+                                driveToBasketReverse,
+                                arm.armToVertical()),
                             new ParallelAction(
                                     lift.liftToScanning(),
                                     wrist.wristToHome(),
@@ -377,23 +368,23 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         //Handle Sample 2
         timer.reset();
         samplePipeline.startScanning();
-
+        telemetry.addLine("Scanning for sample 2");
+        telemetry.update();
         while (!samplePipeline.isSampleDetected() && timer.milliseconds() < 250) {
-            telemetry.addLine("Scanning for sample");
-            telemetry.update();
+
             sleep(50);
         }
 
         if (samplePipeline.isSampleDetected()) {
             //we found a sample - lets grab it and take it to the basket!
-            telemetry.addLine("Sample detected - plotting a course");
+            telemetry.addLine("Sample 2 detected - plotting a course to collect");
             telemetry.update();
             //the next line will reset sampleDetected to false, but that's ok as we already know we found one
             samplePipeline.stopScanning();
 
             Pose2d currentPose = drive.localizer.getPose(); //field centric pose
             Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
-            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centrric sample vector
+            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centric sample vector
 
             Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
@@ -405,24 +396,32 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             //grab it, score it, go to sample 3
             Actions.runBlocking(
                     new SequentialAction(
-
                             new ParallelAction(
+                                    new TelemetryAction(telemetry,"Moving to pick up sample 3"),
                                     driveToSample,
                                     lift.liftToGrabbing(),
                                     wrist.wristToAngle(samplePipeline.getSampleAngle())
                             ),
+                            new TelemetryAction(telemetry,"Cosing Gripper"),
                             gripper.gripperToClosed(),
+                            new TelemetryAction(telemetry, "Sample Collected"),
                             new ParallelAction(
+                                    new TelemetryAction(telemetry, "Driving to basket"),
                                     new SequentialAction(
                                             arm.armToVertical(),
+                                            //this delay means the arm first goes vertical (for driving) then after a short delay goes to 45 degrees to deposit
                                             new SleepAction(0.5),
                                             arm.armToBasket()
                                     ),
                                     driveToBasket2,
                                     lift.liftToHighBasket()
                             ),
+                            new TelemetryAction(telemetry, "Depositing sample 2 in high basket"),
                             gripper.gripperToOpen(),
-                            arm.armToVertical(),
+                            new ParallelAction(
+                                    new TelemetryAction(telemetry, "Backing away from basket"),
+                                    driveToBasketReverse,
+                                    arm.armToVertical()),
                             new ParallelAction(
                                     lift.liftToScanning(),
                                     wrist.wristToHome(),
@@ -433,7 +432,7 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             );
         } else {
             //we didn't find a sample. Time to bail and look for the next one.
-            telemetry.addLine("ERROR: Sample not found in time. Moving on to sample 2");
+            telemetry.addLine("ERROR: Sample not found in time. Moving on to sample 3");
             telemetry.update();
             samplePipeline.stopScanning();
             Actions.runBlocking(
@@ -442,26 +441,26 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         }
 
 
-        //Handle Sample 3
+        //Handle Sample 1
         timer.reset();
         samplePipeline.startScanning();
-
+        telemetry.addLine("Scanning for sample 3");
+        telemetry.update();
         while (!samplePipeline.isSampleDetected() && timer.milliseconds() < 250) {
-            telemetry.addLine("Scanning for sample");
-            telemetry.update();
+
             sleep(50);
         }
 
         if (samplePipeline.isSampleDetected()) {
             //we found a sample - lets grab it and take it to the basket!
-            telemetry.addLine("Sample detected - plotting a course");
+            telemetry.addLine("Sample 3 detected - plotting a course to collect");
             telemetry.update();
             //the next line will reset sampleDetected to false, but that's ok as we already know we found one
             samplePipeline.stopScanning();
 
             Pose2d currentPose = drive.localizer.getPose(); //field centric pose
             Vector2d sampleVector = samplePipeline.sampleLocation; //robot centric sample vector
-            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centrric sample vector
+            Vector2d rotatedSampleVector = Rotation2d.exp(currentPose.heading.toDouble()-toRadians(90)).times(sampleVector); //field centric sample vector
 
             Vector2d fieldSamplePosition = currentPose.position.plus(rotatedSampleVector); //should rotate and add sample position to generate field centric position of the sample
 
@@ -473,31 +472,43 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
             //grab it, score it, go to park
             Actions.runBlocking(
                     new SequentialAction(
-
                             new ParallelAction(
+                                    new TelemetryAction(telemetry,"Moving to pick up sample 3"),
                                     driveToSample,
                                     lift.liftToGrabbing(),
                                     wrist.wristToAngle(samplePipeline.getSampleAngle())
                             ),
+                            new TelemetryAction(telemetry,"Cosing Gripper"),
                             gripper.gripperToClosed(),
+                            new TelemetryAction(telemetry, "Sample 3 Collected"),
                             new ParallelAction(
-                                    arm.armToVertical(),
-                                    driveToBasket3
+                                    new TelemetryAction(telemetry, "Driving to basket"),
+                                    new SequentialAction(
+                                            arm.armToVertical(),
+                                            //this delay means the arm first goes vertical (for driving) then after a short delay goes to 45 degrees to deposit
+                                            new SleepAction(0.5),
+                                            arm.armToBasket()
+                                    ),
+                                    driveToBasket3,
+                                    lift.liftToHighBasket()
                             ),
-                            lift.liftToHighBasket(),
-                            arm.armToBasket(),
+                            new TelemetryAction(telemetry, "Depositing sample 3 in high basket"),
                             gripper.gripperToOpen(),
                             new ParallelAction(
+                                    new TelemetryAction(telemetry, "Backing away from basket"),
+                                    driveToBasketReverse,
+                                    arm.armToVertical()),
+                            new ParallelAction(
                                     lift.liftToScanning(),
-                                    arm.armToVertical(),
-                                    wrist.wristToHome()
+                                    wrist.wristToHome(),
+                                    driveToPark
                             ),
-                            driveToPark
+                            arm.armToHorizontal()
                     )
             );
         } else {
             //we didn't find a sample. Time to bail and look for the next one.
-            telemetry.addLine("ERROR: Sample not found in time. Moving on to sample 2");
+            telemetry.addLine("ERROR: Sample not found in time. Parking");
             telemetry.update();
             samplePipeline.stopScanning();
             Actions.runBlocking(

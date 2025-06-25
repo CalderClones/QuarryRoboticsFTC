@@ -26,6 +26,14 @@ public class Wrist {
         wristMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
     }
 
+    public void softReset(){
+        wristMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        wristMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        wristMotor.setTargetPosition(0);
+        wristMotor.setPower(1);
+        wristMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    }
+
     public class WristTo implements Action {
         private boolean initialized = false;
         private final double angle;

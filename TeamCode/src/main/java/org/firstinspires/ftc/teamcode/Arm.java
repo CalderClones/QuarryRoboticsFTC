@@ -45,7 +45,7 @@ public class Arm {
     {
         armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         armMotor.setPower(0);
-        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         armMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         while(limitSwitch.isPressed()) {
@@ -56,9 +56,21 @@ public class Arm {
         armMotor.setPower(-0.2);
         }
 
+        while(limitSwitch.isPressed()) {
+            armMotor.setPower(0.1);
+        }
+
         armMotor.setPower(0);
         armMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         armMotor.setTargetPosition(0);
+        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armMotor.setPower(0.5);
+    }
+
+    public void softReset()
+    {
+        armMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         armMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         armMotor.setPower(0.5);
     }
