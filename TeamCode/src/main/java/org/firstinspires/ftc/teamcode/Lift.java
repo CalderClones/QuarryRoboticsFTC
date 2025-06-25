@@ -34,7 +34,7 @@ public class Lift {
         this.presets.put("Grabbing", 120); //Arm measures 98mm above floor when horizontal and at the right height to grab a sample
         this.presets.put("LowChamber", 149); //Calculated - will definitely need tuning
         this.presets.put("Scanning", 250); // We measured 230mm as the best height for scanning
-        this.presets.put("HighChamberClipped", 250); //Calculated - will definitely need tuning
+        this.presets.put("HighChamberClipped", 300); //Calculated - will definitely need tuning
         this.presets.put("HighChamber", 400); //Calculated - will definitely need tuning
         this.presets.put("LowBasket", 562); // Calculated. Assumes arm at 45 degrees
         this.presets.put("HighBasket", 1000); // Calculated - 1092mm to lip of basket with arm at 45, sample should be 1117mm above floor - 25mm clearance

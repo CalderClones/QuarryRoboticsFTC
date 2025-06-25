@@ -91,10 +91,12 @@ public class SamplePipeline extends OpenCvPipeline {
 
     public void startScanning() {
         this.scanning = true;
+        this.sampleDetected = false;
     }
 
     public void stopScanning() {
         this.scanning = false;
+        this.sampleDetected = false;
     }
 
     public Mat processFrame(Mat input) {

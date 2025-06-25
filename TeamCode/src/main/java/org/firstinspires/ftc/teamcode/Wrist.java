@@ -70,11 +70,11 @@ public class Wrist {
     }
 
     private int angleToTicks(double angle) {
-        return (int) (angle / TICKS_PER_DEGREE);
+        return (int) (angle * TICKS_PER_DEGREE);
     }
 
     private double ticksToAngle(int ticks) {
-        return ticks * TICKS_PER_DEGREE;
+        return ticks / TICKS_PER_DEGREE;
 
     }
 

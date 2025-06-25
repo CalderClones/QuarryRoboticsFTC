@@ -59,14 +59,16 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         double BASKET = Math.toRadians(225);
 
         Pose2d initialPose = new Pose2d(-9, -63, NORTH);
-        Pose2d chamber = new Pose2d(-10, -33.5, NORTH);
-        Pose2d chamberReverse = new Pose2d(-10, -48, NORTH);
-        Pose2d sample1 = new Pose2d(-59.5, -45, NORTH);
-        Pose2d sample2 = new Pose2d(-69.5, -45, NORTH);
-        Pose2d sample3 = new Pose2d(-58, -25, WEST);
-        Pose2d basket = new Pose2d(-63, -57, BASKET);
-        Pose2d basketReverse = new Pose2d(-57, -51, BASKET);
-        Pose2d park = new Pose2d(-24, -12, EAST);
+        Pose2d chamber = new Pose2d(-10, -35.5, NORTH);
+        Pose2d chamberReverse = new Pose2d(-10, -39.5, NORTH);
+        Pose2d chamberAgain = new Pose2d(-10, -32.5, NORTH);
+        Pose2d sample1 = new Pose2d(-59.5, -43, NORTH);
+        Pose2d sample2 = new Pose2d(-69.5, -43, NORTH);
+        Pose2d sample3 = new Pose2d(-58, -23, WEST);
+        Pose2d basket = new Pose2d(-64, -53, BASKET);
+        Pose2d basketReverse = new Pose2d(-57, -51, WEST);
+        Vector2d basketBackup = new Vector2d(-57, -51);
+        Pose2d park = new Pose2d(-24, -6, EAST);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam"), cameraMonitorViewId);
@@ -123,6 +125,15 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                 .splineToSplineHeading((chamber), NORTH)
                 .build();
 
+        Action driveToChamberReverse = drive.actionBuilder(chamber)
+                .setReversed(true)
+                .splineToSplineHeading((chamberReverse), SOUTH)
+                .build();
+
+        Action driveToChamberAgain = drive.actionBuilder(chamberReverse)
+                .splineToSplineHeading((chamberAgain), NORTH)
+                .build();
+
 
         Action driveToSample1 = drive.actionBuilder(chamber)
                 .setReversed(true)
@@ -137,7 +148,7 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
 
         Action driveToBasketReverse = drive.actionBuilder(basket)
                 .setReversed(true)
-                .splineToSplineHeading(basketReverse, NORTH)
+                .splineToSplineHeading(basketReverse, EAST)
                 .build();
 
         Action driveToSample2 = drive.actionBuilder(basketReverse)
@@ -269,13 +280,20 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                         new ParallelAction(
                                 new TelemetryAction(telemetry, "Driving to Chamber and raising lift"),
                                 driveToChamber,
+                                wrist.wristToHome(),
                                 lift.liftToHighChamber()),
                         new TelemetryAction(telemetry, "Clipping Specimen"),
                         lift.liftToHighChamberClipped(),
                         // Commented out as not sure this sleep is needed
-                        // new SleepAction(0.5),
+                        //new SleepAction(0.5),
                         new TelemetryAction(telemetry, "Releasing Specimen"),
                         gripper.gripperToOpen(),
+                        //new SequentialAction(
+                        //        driveToChamberReverse,
+                        //        lift.liftToLowBasket(),
+                        //        driveToChamberAgain,
+                        //        lift.liftToHighChamberClipped()
+                        //),
                         new ParallelAction(
                                 new TelemetryAction(telemetry, "Driving to sample 1 and moving lift"),
                                 lift.liftToScanning(),
@@ -333,26 +351,30 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                             new ParallelAction(
                                     new TelemetryAction(telemetry, "Driving to basket"),
                                     new SequentialAction(
-                                        arm.armToVertical(),
-                                        //this delay means the arm first goes vertical (for driving) then after a short delay goes to 45 degrees to deposit
-                                        new SleepAction(0.5),
-                                        arm.armToBasket()
+                                        arm.armToVertical()
+                                            //this delay means the arm first goes vertical (for driving) then after a short delay goes to 45 degrees to deposit
                                     ),
                                     driveToBasket1,
                                     lift.liftToHighBasket()
                             ),
+                            arm.armToBasket(),
                             new TelemetryAction(telemetry, "Depositing sample 1 in high basket"),
                             gripper.gripperToOpen(),
+                            arm.armToVertical(),
                             new ParallelAction(
                                 new TelemetryAction(telemetry, "Backing away from basket"),
                                 driveToBasketReverse,
-                                arm.armToVertical()),
+                                new SleepAction(1)
+                            ),
                             new ParallelAction(
                                     lift.liftToScanning(),
                                     wrist.wristToHome(),
                                     driveToSample2
                             ),
-                            arm.armToHorizontal()
+                            new ParallelAction(
+                                arm.armToHorizontal(),
+                                    new SleepAction(2)
+                            )
                     )
             );
         } else {
@@ -399,34 +421,32 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                             new ParallelAction(
                                     new TelemetryAction(telemetry,"Moving to pick up sample 3"),
                                     driveToSample,
-                                    lift.liftToGrabbing(),
-                                    wrist.wristToAngle(samplePipeline.getSampleAngle())
+                                    wrist.wristToAngle(samplePipeline.getSampleAngle()),
+                                    new SleepAction(0.5)
                             ),
+                            lift.liftToGrabbing(),
                             new TelemetryAction(telemetry,"Cosing Gripper"),
                             gripper.gripperToClosed(),
                             new TelemetryAction(telemetry, "Sample Collected"),
+                            arm.armToVertical(),
                             new ParallelAction(
-                                    new TelemetryAction(telemetry, "Driving to basket"),
-                                    new SequentialAction(
-                                            arm.armToVertical(),
-                                            //this delay means the arm first goes vertical (for driving) then after a short delay goes to 45 degrees to deposit
-                                            new SleepAction(0.5),
-                                            arm.armToBasket()
-                                    ),
                                     driveToBasket2,
-                                    lift.liftToHighBasket()
+                                    lift.liftToHighBasket(),
+                                    new TelemetryAction(telemetry, "Driving to basket")
                             ),
-                            new TelemetryAction(telemetry, "Depositing sample 2 in high basket"),
-                            gripper.gripperToOpen(),
-                            new ParallelAction(
-                                    new TelemetryAction(telemetry, "Backing away from basket"),
-                                    driveToBasketReverse,
-                                    arm.armToVertical()),
-                            new ParallelAction(
-                                    lift.liftToScanning(),
-                                    wrist.wristToHome(),
-                                    driveToSample3
-                            ),
+
+                        arm.armToBasket(),
+                        new TelemetryAction(telemetry, "Depositing sample 2 in high basket"),
+                        gripper.gripperToOpen(),
+                        arm.armToVertical(),
+                        new ParallelAction(
+                                new TelemetryAction(telemetry, "Backing away from basket"),
+                                driveToBasketReverse),
+                        new ParallelAction(
+                                lift.liftToScanning(),
+                                wrist.wristToHome(),
+                                driveToSample3
+                        ),
                             arm.armToHorizontal()
                     )
             );
@@ -441,7 +461,7 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
         }
 
 
-        //Handle Sample 1
+        //Handle Sample 3
         timer.reset();
         samplePipeline.startScanning();
         telemetry.addLine("Scanning for sample 3");
@@ -494,10 +514,12 @@ public class QuarryRoboticsAutonomous extends LinearOpMode {
                             ),
                             new TelemetryAction(telemetry, "Depositing sample 3 in high basket"),
                             gripper.gripperToOpen(),
+                            arm.armToVertical(),
+                            new SleepAction(0.5),
                             new ParallelAction(
                                     new TelemetryAction(telemetry, "Backing away from basket"),
-                                    driveToBasketReverse,
-                                    arm.armToVertical()),
+                                    driveToBasketReverse),
+
                             new ParallelAction(
                                     lift.liftToScanning(),
                                     wrist.wristToHome(),

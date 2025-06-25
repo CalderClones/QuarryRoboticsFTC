@@ -92,7 +92,7 @@ public class Arm {
                     setTargetAngle(0);
                 }
                else if (Objects.equals(position, "Basket")) {
-                  setTargetAngle(45);
+                  setTargetAngle(30);
                 }
                 initialized = true;
             }
