@@ -33,8 +33,9 @@ public class Lift {
         this.presets.put("LowChamberClipped", 60); //Calculated - will definitely need tuning
         this.presets.put("Grabbing", 120); //Arm measures 98mm above floor when horizontal and at the right height to grab a sample
         this.presets.put("LowChamber", 149); //Calculated - will definitely need tuning
-        this.presets.put("Scanning", 250); // We measured 230mm as the best height for scanning
-        this.presets.put("HighChamberClipped", 300); //Calculated - will definitely need tuning
+        this.presets.put("Scanning", 412);//; Calculated
+        //OLD VERSION PRE NATIONALS: 250); // We measured 230mm as the best height for scanning
+        this.presets.put("HighChamberClipped", 250); //Calculated - will definitely need tuning
         this.presets.put("HighChamber", 400); //Calculated - will definitely need tuning
         this.presets.put("LowBasket", 562); // Calculated. Assumes arm at 45 degrees
         this.presets.put("HighBasket", 1000); // Calculated - 1092mm to lip of basket with arm at 45, sample should be 1117mm above floor - 25mm clearance
@@ -260,6 +261,8 @@ public class Lift {
         private boolean initialized = false;
         private final String preset;
 
+        private ElapsedTime watchdogTimer = new ElapsedTime();
+
         public LiftTo(String preset) {
             this.preset = preset;
         }
@@ -267,11 +270,15 @@ public class Lift {
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             if (!initialized) {
+                watchdogTimer.reset();
                 move_to_preset(preset);
                 initialized = true;
             }
             double pos = getCurrentHeight();
             telemetryPacket.put("liftHeight", pos);
+            if (watchdogTimer.milliseconds() > 3000) {
+                return false;
+            }
             //This needs to return true when action is still running and false when not.
             return !stationary();
         }

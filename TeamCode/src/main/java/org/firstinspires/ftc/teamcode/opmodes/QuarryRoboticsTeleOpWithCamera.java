@@ -13,6 +13,7 @@ import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Rotation2d;
+import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -51,7 +52,7 @@ import java.util.Objects;
 @Config
 @TeleOp(name = "2025 Nationals TeleOp", group = "drive")
 public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
-    private final String alliance = "Both";
+    private final String alliance = DataStore.alliance;
     private final String start_pos = "left";
 
     private final Gamepad currentGamepad1 = new Gamepad();
@@ -217,45 +218,44 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             currentGamepad2.copy(gamepad2);
 
             if (previousGamepad1 != null && previousGamepad2 != null && currentGamepad1 != null && currentGamepad2 != null){
-                stateMachine.update(previousGamepad2, gamepad2);
+                stateMachine.update(previousGamepad1, gamepad1);
             }
 
-            //only control availabel to the lift operator when we're not driving is to cancel (to switch state to driving!)
+            //only control available to the lift operator when we're not driving is to cancel (to switch state to driving!)
             if(stateMachine.getGrabberState() == GrabberFiniteStateMachine.GrabberState.DRIVING)
             {
                 //proportional control for arm
-                arm.moveArm(-gamepad2.right_stick_y);
+                //arm.moveArm(-gamepad2.right_stick_y);
                 //proportional control for lift
-                lift.moveLift(-gamepad2.left_stick_y);
+                //lift.moveLift(-gamepad2.left_stick_y);
 
                 //proportional control (albeit weird) for wrist)
-                if (currentGamepad2.left_trigger < 0.1 && currentGamepad2.right_trigger < 0.1) {
+                if (currentGamepad1.left_trigger < 0.1 && currentGamepad1.right_trigger < 0.1) {
                     wrist.setTargetAngle(0);
-                } else if (currentGamepad2.left_trigger >= 0.1)
-                    wrist.setTargetAngle(-90 * currentGamepad2.left_trigger);
-                else if (currentGamepad2.right_trigger >= 0.1)
-                    wrist.setTargetAngle(90 * currentGamepad2.right_trigger);
+                } else if (currentGamepad1.left_trigger >= 0.1)
+                    wrist.setTargetAngle(-90 * currentGamepad1.left_trigger);
+                else if (currentGamepad1.right_trigger >= 0.1)
+                    wrist.setTargetAngle(90 * currentGamepad1.right_trigger);
 
                 //lift preset handling
-                if (currentGamepad2.dpad_up && !previousGamepad2.dpad_up) {
-                    lift.nextPresetPosition();
+                if (currentGamepad1.dpad_up && !previousGamepad1.dpad_up) {
+                    runningActions.add(new SequentialAction(
+                            lift.liftToHighBasket(),
+                            arm.armToBasket()
+                    ));
                     telemetry.addData("liftPreset", lift.liftTargetPreset);
                 }
-                if (currentGamepad2.dpad_down && !previousGamepad2.dpad_down) {
-                    lift.previousPresetPosition();
-                    telemetry.addData("liftPreset", lift.liftTargetPreset);
-                }
+                if (currentGamepad1.dpad_down && !previousGamepad1.dpad_down) {
+                    runningActions.add(new SequentialAction(
+                            arm.armToVertical(),
+                            lift.liftToFloor()
 
-                //TODO: preset handling for arm?
-                if (currentGamepad2.dpad_left && !previousGamepad2.dpad_left) {
-                    //lift.setTargetHeight(0);
-                }
-                if (currentGamepad2.dpad_right && !previousGamepad2.dpad_right) {
-                    //lift.setTargetHeight(1000);
+                    ));
+                    telemetry.addData("liftPreset", lift.liftTargetPreset);
                 }
 
                 //gripper control
-                if (currentGamepad2.a && !previousGamepad2.a) { //CROSS button
+                if (currentGamepad1.a && !previousGamepad1.a) { //CROSS button
                     if (Objects.equals(gripper.getPosition(), "Open")) {
                         gripper.close();
                     } else {
@@ -267,16 +267,16 @@ public class QuarryRoboticsTeleOpWithCamera extends LinearOpMode {
             //if the driver isn't locked out, process their stick positions
             if(!driverLockedOut) {
                 //Handle crawl/walk.sprint controls
-                if (currentGamepad1.left_bumper || currentGamepad1.left_trigger > 0.5) {
+                if (currentGamepad1.left_bumper) {
                     power_multiplier = 0.25;
-                } else if (currentGamepad1.right_bumper || currentGamepad1.right_trigger > 0.5) {
+                } else if (currentGamepad1.right_bumper) {
                     power_multiplier = 1.0;
                 } else {
                     power_multiplier = 0.4;
                 }
 
                 //handle Rey's weird need for reversed controls some times
-                if (currentGamepad1.b && !previousGamepad1.b) {
+                if (currentGamepad1.dpad_left && !previousGamepad1.dpad_left) {
                     reverse = !reverse;
                 }
 

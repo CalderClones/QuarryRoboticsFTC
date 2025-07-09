@@ -39,7 +39,8 @@ public class SamplePipeline extends OpenCvPipeline {
     public Vector2d robotToGripper =  new Vector2d(-14.75 / 25.4, 411.71 / 25.4);
     Vector2d cameraToGripper = robotToCamera.minus(robotToGripper);
     Vector2d cameraToSample = new Vector2d(0,0);
-    double PIXELS_PER_INCH = 320.0 / (212 / 25.4);
+    double PIXELS_PER_INCH = 353 / (350 / 25.4);
+            // OLD VERSION PRE NATIONALS: 320.0 / (212 / 25.4); // decrease this value - lets meassure it?
     boolean viewportPaused;
     Scalar green = new Scalar(255, 255, 0);
 
